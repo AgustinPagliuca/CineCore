@@ -16,7 +16,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CineCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f3991b3758a4b399546ccdd7333dc0cabcd8f35e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3e75167a46fcc12c316d17deedfc9c4444f591b1")]
 [assembly: System.Reflection.AssemblyProductAttribute("CineCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CineCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

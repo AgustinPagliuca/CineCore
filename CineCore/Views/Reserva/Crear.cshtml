@@ -1,0 +1,45 @@
+﻿@{
+    ViewData["Title"] = "Elegí tu butaca";
+    var funcion = ViewBag.Funcion as CineCore.Models.Funcion;
+    var butacas = ViewBag.ButacasDisponibles as List<CineCore.Models.Butaca>;
+}
+
+<h2>Reservar - @funcion.Pelicula.Titulo</h2>
+<p><strong>Fecha:</strong> @funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</p>
+<p><strong>Sala:</strong> @funcion.Sala.Numero</p>
+<p><strong>Precio:</strong> $@funcion.Precio</p>
+
+<hr />
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+@if (!butacas.Any())
+{
+    <div class="alert alert-warning">No hay butacas disponibles para esta función.</div>
+}
+else
+{
+    <h4>Seleccioná una butaca:</h4>
+    <form method="post" asp-action="Crear">
+        <input type="hidden" name="funcionId" value="@funcion.Id" />
+        <div class="row">
+            @foreach (var butaca in butacas)
+            {
+                <div class="col-md-1 mb-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="butacaId"
+                               value="@butaca.Id" id="b@(butaca.Id)" required />
+                        <label class="form-check-label" for="b@(butaca.Id)">
+                            @butaca.Fila@butaca.Numero
+                        </label>
+                    </div>
+                </div>
+            }
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Confirmar Reserva</button>
+        <a asp-controller="Funcion" asp-action="Index" class="btn btn-secondary mt-3">Volver</a>
+    </form>
+}

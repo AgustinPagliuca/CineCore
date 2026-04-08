@@ -1,178 +1,107 @@
-﻿using CineCore.Data;
-using CineCore.Models;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using CineCore.Data;
+using CineCore.Models;
 
 namespace CineCore.Controllers
 {
-    [Authorize(Roles = "Empleado")]
+    [Authorize]
     public class ReservaController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public ReservaController(ApplicationDbContext context)
+        public ReservaController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
 
-        // GET: Reserva
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.Reservas.Include(r => r.Butaca).Include(r => r.Cliente).Include(r => r.Funcion);
-            return View(await applicationDbContext.ToListAsync());
-        }
-
-        // GET: Reserva/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var reserva = await _context.Reservas
-                .Include(r => r.Butaca)
-                .Include(r => r.Cliente)
+            var userId = _userManager.GetUserId(User);
+            var reservas = await _context.Reservas
                 .Include(r => r.Funcion)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (reserva == null)
-            {
-                return NotFound();
-            }
+                    .ThenInclude(f => f.Pelicula)
+                .Include(r => r.Funcion)
+                    .ThenInclude(f => f.Sala)
+                .Include(r => r.Butaca)
+                .Where(r => r.ClienteId == userId)
+                .ToListAsync();
 
-            return View(reserva);
+            return View(reservas);
         }
 
-        // GET: Reserva/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Crear(int funcionId)
         {
-            ViewData["ButacaId"] = new SelectList(_context.Butacas, "Id", "Id");
-            ViewData["ClienteId"] = new SelectList(_context.Users, "Id", "Id");
-            ViewData["FuncionId"] = new SelectList(_context.Funciones, "Id", "Id");
+            var funcion = await _context.Funciones
+                .Include(f => f.Pelicula)
+                .Include(f => f.Sala)
+                    .ThenInclude(s => s.Butacas)
+                .Include(f => f.Reservas)
+                .FirstOrDefaultAsync(f => f.Id == funcionId);
+
+            if (funcion == null)
+                return NotFound();
+
+            var butacasOcupadas = funcion.Reservas.Select(r => r.ButacaId).ToList();
+            var butacasDisponibles = funcion.Sala.Butacas
+                .Where(b => !butacasOcupadas.Contains(b.Id))
+                .ToList();
+
+            ViewBag.Funcion = funcion;
+            ViewBag.ButacasDisponibles = butacasDisponibles;
+
             return View();
         }
 
-        // POST: Reserva/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,FechaReserva,Estado,ClienteId,FuncionId,ButacaId")] Reserva reserva)
+        public async Task<IActionResult> Crear(int funcionId, int butacaId)
         {
-            if (ModelState.IsValid)
-            {
-                _context.Add(reserva);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["ButacaId"] = new SelectList(_context.Butacas, "Id", "Id", reserva.ButacaId);
-            ViewData["ClienteId"] = new SelectList(_context.Users, "Id", "Id", reserva.ClienteId);
-            ViewData["FuncionId"] = new SelectList(_context.Funciones, "Id", "Id", reserva.FuncionId);
-            return View(reserva);
-        }
+            var userId = _userManager.GetUserId(User);
 
-        // GET: Reserva/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
+            var yaReservada = await _context.Reservas
+                .AnyAsync(r => r.FuncionId == funcionId && r.ButacaId == butacaId);
+
+            if (yaReservada)
             {
-                return NotFound();
+                TempData["Error"] = "Esa butaca ya fue reservada.";
+                return RedirectToAction("Crear", new { funcionId });
             }
 
-            var reserva = await _context.Reservas.FindAsync(id);
-            if (reserva == null)
+            var reserva = new Reserva
             {
-                return NotFound();
-            }
-            ViewData["ButacaId"] = new SelectList(_context.Butacas, "Id", "Id", reserva.ButacaId);
-            ViewData["ClienteId"] = new SelectList(_context.Users, "Id", "Id", reserva.ClienteId);
-            ViewData["FuncionId"] = new SelectList(_context.Funciones, "Id", "Id", reserva.FuncionId);
-            return View(reserva);
-        }
+                ClienteId = userId!,
+                FuncionId = funcionId,
+                ButacaId = butacaId,
+                FechaReserva = DateTime.Now,
+                Estado = "Confirmada"
+            };
 
-        // POST: Reserva/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,FechaReserva,Estado,ClienteId,FuncionId,ButacaId")] Reserva reserva)
-        {
-            if (id != reserva.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(reserva);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ReservaExists(reserva.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["ButacaId"] = new SelectList(_context.Butacas, "Id", "Id", reserva.ButacaId);
-            ViewData["ClienteId"] = new SelectList(_context.Users, "Id", "Id", reserva.ClienteId);
-            ViewData["FuncionId"] = new SelectList(_context.Funciones, "Id", "Id", reserva.FuncionId);
-            return View(reserva);
-        }
-
-        // GET: Reserva/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var reserva = await _context.Reservas
-                .Include(r => r.Butaca)
-                .Include(r => r.Cliente)
-                .Include(r => r.Funcion)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (reserva == null)
-            {
-                return NotFound();
-            }
-
-            return View(reserva);
-        }
-
-        // POST: Reserva/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var reserva = await _context.Reservas.FindAsync(id);
-            if (reserva != null)
-            {
-                _context.Reservas.Remove(reserva);
-            }
-
+            _context.Reservas.Add(reserva);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+
+            TempData["Exito"] = "Reserva realizada con éxito.";
+            return RedirectToAction("Index");
         }
 
-        private bool ReservaExists(int id)
+        public async Task<IActionResult> Cancelar(int id)
         {
-            return _context.Reservas.Any(e => e.Id == id);
+            var userId = _userManager.GetUserId(User);
+            var reserva = await _context.Reservas
+                .FirstOrDefaultAsync(r => r.Id == id && r.ClienteId == userId);
+
+            if (reserva == null)
+                return NotFound();
+
+            reserva.Estado = "Cancelada";
+            await _context.SaveChangesAsync();
+
+            TempData["Exito"] = "Reserva cancelada.";
+            return RedirectToAction("Index");
         }
     }
 }

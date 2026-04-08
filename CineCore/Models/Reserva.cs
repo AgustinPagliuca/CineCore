@@ -7,12 +7,12 @@
         public string Estado { get; set; } = "Pendiente";
 
         public string ClienteId { get; set; } = string.Empty;
-        public ApplicationUser Cliente { get; set; } = null!;
+        public ApplicationUser? Cliente { get; set; }
 
         public int FuncionId { get; set; }
-        public Funcion Funcion { get; set; } = null!;
+        public Funcion? Funcion { get; set; }
 
         public int ButacaId { get; set; }
-        public Butaca Butaca { get; set; } = null!;
+        public Butaca? Butaca { get; set; }
     }
 }

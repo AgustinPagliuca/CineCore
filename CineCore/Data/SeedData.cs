@@ -10,7 +10,7 @@ namespace CineCore.Data
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-            string[] roles = { "Empleado", "Cliente" };
+            string[] roles = { Roles.Empleado, Roles.Cliente };
 
             foreach (var rol in roles)
             {
@@ -34,7 +34,7 @@ namespace CineCore.Data
                 };
 
                 await userManager.CreateAsync(adminUser, "Admin123!");
-                await userManager.AddToRoleAsync(adminUser, "Empleado");
+                await userManager.AddToRoleAsync(adminUser, Roles.Empleado);
             }
         }
     }

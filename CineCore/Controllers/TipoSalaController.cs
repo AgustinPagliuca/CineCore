@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CineCore.Controllers
 {
-    [Authorize(Roles = "Empleado")]
+    [Authorize(Roles = Roles.Empleado)]
     public class TipoSalaController : Controller
     {
         private readonly ApplicationDbContext _context;

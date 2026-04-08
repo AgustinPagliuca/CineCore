@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace CineCore.Controllers
 {
-    [Authorize(Roles = "Empleado")]
+    [Authorize(Roles = Roles.Empleado)]
     public class SalaController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -50,7 +50,7 @@ namespace CineCore.Controllers
         // GET: Sala/Create
         public IActionResult Create()
         {
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Id");
+            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre");
             return View();
         }
 
@@ -61,14 +61,40 @@ namespace CineCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Numero,Capacidad,TipoSalaId")] Sala sala)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                _context.Add(sala);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                var errores = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+                TempData["Error"] = string.Join(", ", errores);
+                ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", sala.TipoSalaId);
+                return View(sala);
             }
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Id", sala.TipoSalaId);
-            return View(sala);
+
+            _context.Add(sala);
+            await _context.SaveChangesAsync();
+
+            // Generar butacas automáticamente
+            string[] filas = { "A", "B", "C", "D", "E", "F" };
+            int butacasPorFila = sala.Capacidad / filas.Length;
+            int butacasGeneradas = 0;
+
+            foreach (var fila in filas)
+            {
+                for (int i = 1; i <= butacasPorFila; i++)
+                {
+                    if (butacasGeneradas >= sala.Capacidad) break;
+                    _context.Butacas.Add(new Butaca
+                    {
+                        Fila = fila,
+                        Numero = i,
+                        SalaId = sala.Id
+                    });
+                    butacasGeneradas++;
+                }
+                if (butacasGeneradas >= sala.Capacidad) break;
+            }
+
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Sala/Edit/5
@@ -84,7 +110,7 @@ namespace CineCore.Controllers
             {
                 return NotFound();
             }
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Id", sala.TipoSalaId);
+            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", sala.TipoSalaId);
             return View(sala);
         }
 
@@ -120,7 +146,7 @@ namespace CineCore.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Id", sala.TipoSalaId);
+            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", sala.TipoSalaId);
             return View(sala);
         }
 

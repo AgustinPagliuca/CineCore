@@ -9,7 +9,7 @@ namespace CineCore.Models
         public int Capacidad { get; set; }
 
         public int TipoSalaId { get; set; }
-        public TipoSala TipoSala { get; set; } = null!;
+        public TipoSala? TipoSala { get; set; }
 
         public ICollection<Butaca> Butacas { get; set; } = new List<Butaca>();
         public ICollection<Funcion> Funciones { get; set; } = new List<Funcion>();

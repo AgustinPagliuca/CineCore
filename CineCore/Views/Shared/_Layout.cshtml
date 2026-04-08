@@ -23,10 +23,15 @@
                         <li class="nav-item">
                             <a class="nav-link text-white" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                         </li>
+
                         @using Microsoft.AspNetCore.Identity
                         @inject SignInManager<CineCore.Models.ApplicationUser> SignInManager
 
-                        @if (SignInManager.IsSignedIn(User) && User.IsInRole("Empleado"))
+                        <li class="nav-item">
+                            <a class="nav-link text-white" asp-controller="Funcion" asp-action="Index">Cartelera</a>
+                        </li>
+
+                        @if (SignInManager.IsSignedIn(User) && User.IsInRole(CineCore.Models.Roles.Empleado))
                         {
                             <li class="nav-item dropdown">
                                 <a class="nav-link text-white dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
