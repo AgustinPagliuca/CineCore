@@ -1,42 +1,44 @@
 ﻿@model CineCore.Models.Funcion
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Detalle de función";
 }
 
-<h1>Details</h1>
+<h1>Detalle de función</h1>
 
-<div>
-    <h4>Funcion</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.FechaHora)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.FechaHora)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Precio)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Precio)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Pelicula)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Pelicula.Id)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Sala)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Sala.Id)
-        </dd>
-    </dl>
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title">@Model.Pelicula!.Titulo</h4>
+        <hr />
+        <dl class="row">
+            <dt class="col-sm-3">Fecha y hora</dt>
+            <dd class="col-sm-9">@Model.FechaHora.ToString("dddd dd/MM/yyyy HH:mm")</dd>
+
+            <dt class="col-sm-3">Sala</dt>
+            <dd class="col-sm-9">Sala @Model.Sala!.Numero (@Model.Sala.TipoSala!.Nombre)</dd>
+
+            <dt class="col-sm-3">Capacidad</dt>
+            <dd class="col-sm-9">@Model.Sala.Capacidad butacas</dd>
+
+            <dt class="col-sm-3">Lugares disponibles</dt>
+            <dd class="col-sm-9">@Model.LugaresDisponibles</dd>
+
+            <dt class="col-sm-3">Precio base</dt>
+            <dd class="col-sm-9">@Money.Format(Model.Precio)</dd>
+
+            <dt class="col-sm-3">Extra por @Model.Sala.TipoSala.Nombre</dt>
+            <dd class="col-sm-9">@Money.Format(Model.ExtraTipoSala)</dd>
+
+            <dt class="col-sm-3"><strong>Precio final</strong></dt>
+            <dd class="col-sm-9"><strong>@Money.Format(Model.PrecioFinal)</strong></dd>
+        </dl>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+
+<div class="mt-3">
+    @if (User.IsInRole(CineCore.Models.Roles.Empleado))
+    {
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Editar</a>
+    }
+    <a asp-action="Index" class="btn btn-outline-primary">Volver a la cartelera</a>
 </div>

@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using CineCore.Data;
+using CineCore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using CineCore.Data;
-using CineCore.Models;
 
 namespace CineCore.Controllers
 {
@@ -22,25 +22,42 @@ namespace CineCore.Controllers
             var funciones = await _context.Funciones
                 .Include(f => f.Pelicula)
                 .Include(f => f.Sala)
+                    .ThenInclude(s => s!.TipoSala)
+                .OrderBy(f => f.FechaHora)
                 .ToListAsync();
+
             return View(funciones);
         }
 
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null) return NotFound();
+            IActionResult result;
 
-            var funcion = await _context.Funciones
-                .Include(f => f.Pelicula)
-                .Include(f => f.Sala)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            if (id == null)
+            {
+                result = NotFound();
+            }
+            else
+            {
+                var funcion = await _context.Funciones
+                    .Include(f => f.Pelicula)
+                    .Include(f => f.Sala)
+                        .ThenInclude(s => s!.TipoSala)
+                    .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (funcion == null) return NotFound();
+                if (funcion == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    result = View(funcion);
+                }
+            }
 
-            return View(funcion);
+            return result;
         }
 
-        // Solo Empleados
         [Authorize(Roles = Roles.Empleado)]
         public IActionResult Create()
         {
@@ -54,28 +71,49 @@ namespace CineCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,FechaHora,Precio,PeliculaId,SalaId")] Funcion funcion)
         {
+            IActionResult result;
+
             if (ModelState.IsValid)
             {
                 _context.Add(funcion);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                result = RedirectToAction(nameof(Index));
             }
-            ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
-            ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
-            return View(funcion);
+            else
+            {
+                ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
+                ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
+                result = View(funcion);
+            }
+
+            return result;
         }
 
         [Authorize(Roles = Roles.Empleado)]
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null) return NotFound();
+            IActionResult result;
 
-            var funcion = await _context.Funciones.FindAsync(id);
-            if (funcion == null) return NotFound();
+            if (id == null)
+            {
+                result = NotFound();
+            }
+            else
+            {
+                var funcion = await _context.Funciones.FindAsync(id);
+                if (funcion == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
+                    ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
+                    result = View(funcion);
+                }
+            }
 
-            ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
-            ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
-            return View(funcion);
+            return result;
         }
 
         [Authorize(Roles = Roles.Empleado)]
@@ -83,41 +121,67 @@ namespace CineCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,FechaHora,Precio,PeliculaId,SalaId")] Funcion funcion)
         {
-            if (id != funcion.Id) return NotFound();
+            IActionResult result;
 
-            if (ModelState.IsValid)
+            if (id != funcion.Id)
+            {
+                result = NotFound();
+            }
+            else if (!ModelState.IsValid)
+            {
+                ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
+                ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
+                result = View(funcion);
+            }
+            else
             {
                 try
                 {
                     _context.Update(funcion);
                     await _context.SaveChangesAsync();
+                    result = RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!_context.Funciones.Any(e => e.Id == funcion.Id))
-                        return NotFound();
-                    throw;
+                    if (_context.Funciones.Any(e => e.Id == funcion.Id))
+                    {
+                        throw;
+                    }
+                    result = NotFound();
                 }
-                return RedirectToAction(nameof(Index));
             }
-            ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
-            ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
-            return View(funcion);
+
+            return result;
         }
 
         [Authorize(Roles = Roles.Empleado)]
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null) return NotFound();
+            IActionResult result;
 
-            var funcion = await _context.Funciones
-                .Include(f => f.Pelicula)
-                .Include(f => f.Sala)
-                .FirstOrDefaultAsync(m => m.Id == id);
+            if (id == null)
+            {
+                result = NotFound();
+            }
+            else
+            {
+                var funcion = await _context.Funciones
+                    .Include(f => f.Pelicula)
+                    .Include(f => f.Sala)
+                        .ThenInclude(s => s!.TipoSala)
+                    .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (funcion == null) return NotFound();
+                if (funcion == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    result = View(funcion);
+                }
+            }
 
-            return View(funcion);
+            return result;
         }
 
         [Authorize(Roles = Roles.Empleado)]
@@ -126,10 +190,13 @@ namespace CineCore.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var funcion = await _context.Funciones.FindAsync(id);
-            if (funcion != null)
-                _context.Funciones.Remove(funcion);
 
-            await _context.SaveChangesAsync();
+            if (funcion != null)
+            {
+                _context.Funciones.Remove(funcion);
+                await _context.SaveChangesAsync();
+            }
+
             return RedirectToAction(nameof(Index));
         }
     }

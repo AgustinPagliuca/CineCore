@@ -28,6 +28,7 @@ namespace CineCore.Controllers
                     .ThenInclude(f => f!.Pelicula)
                 .Include(r => r.Funcion)
                     .ThenInclude(f => f!.Sala)
+                        .ThenInclude(s => s!.TipoSala)
                 .Include(r => r.Butaca)
                 .Where(r => r.ClienteId == userId)
                 .OrderByDescending(r => r.FechaReserva)
@@ -42,6 +43,8 @@ namespace CineCore.Controllers
 
             var funcion = await _context.Funciones
                 .Include(f => f.Pelicula)
+                .Include(f => f.Sala)
+                    .ThenInclude(s => s!.TipoSala)
                 .Include(f => f.Sala)
                     .ThenInclude(s => s!.Butacas)
                 .Include(f => f.Reservas)
@@ -79,12 +82,21 @@ namespace CineCore.Controllers
             var userId = _userManager.GetUserId(User);
             IActionResult result;
 
+            var funcion = await _context.Funciones
+                .Include(f => f.Sala)
+                    .ThenInclude(s => s!.TipoSala)
+                .FirstOrDefaultAsync(f => f.Id == funcionId);
+
             var butacaOcupada = await _context.Reservas.AnyAsync(r =>
                 r.FuncionId == funcionId
                 && r.ButacaId == butacaId
                 && r.Estado != EstadoReserva.Cancelada);
 
-            if (butacaOcupada)
+            if (funcion == null)
+            {
+                result = NotFound();
+            }
+            else if (butacaOcupada)
             {
                 TempData[TempKeys.Error] = "Esa butaca ya fue reservada.";
                 result = RedirectToAction(nameof(Crear), new { funcionId });
@@ -97,7 +109,8 @@ namespace CineCore.Controllers
                     FuncionId = funcionId,
                     ButacaId = butacaId,
                     FechaReserva = DateTime.Now,
-                    Estado = EstadoReserva.Confirmada
+                    Estado = EstadoReserva.Confirmada,
+                    PrecioPagado = funcion.PrecioFinal
                 };
 
                 _context.Reservas.Add(reserva);

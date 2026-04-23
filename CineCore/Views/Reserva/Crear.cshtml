@@ -4,19 +4,30 @@
     var butacas = ViewBag.ButacasDisponibles as List<CineCore.Models.Butaca>;
 }
 
-<h2>Reservar - @funcion.Pelicula.Titulo</h2>
-<p><strong>Fecha:</strong> @funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</p>
-<p><strong>Sala:</strong> @funcion.Sala.Numero</p>
-<p><strong>Precio:</strong> $@funcion.Precio</p>
+<h2>Reservar - @funcion!.Pelicula!.Titulo</h2>
 
-<hr />
+<div class="card mb-3">
+    <div class="card-body">
+        <p class="mb-1"><strong>Fecha:</strong> @funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</p>
+        <p class="mb-1"><strong>Sala:</strong> @funcion.Sala!.Numero (@funcion.Sala.TipoSala!.Nombre)</p>
+        <p class="mb-1">
+            <strong>Precio:</strong> @Money.Format(funcion.PrecioFinal)
+            @if (funcion.ExtraTipoSala > 0)
+            {
+                <small class="text-muted">
+                    — @Money.Format(funcion.Precio) base + @Money.Format(funcion.ExtraTipoSala) por @funcion.Sala.TipoSala.Nombre
+                </small>
+            }
+        </p>
+    </div>
+</div>
 
 @if (TempData["Error"] != null)
 {
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-@if (!butacas.Any())
+@if (butacas == null || !butacas.Any())
 {
     <div class="alert alert-warning">No hay butacas disponibles para esta función.</div>
 }
@@ -24,6 +35,7 @@ else
 {
     <h4>Seleccioná una butaca:</h4>
     <form method="post" asp-action="Crear">
+        @Html.AntiForgeryToken()
         <input type="hidden" name="funcionId" value="@funcion.Id" />
         <div class="row">
             @foreach (var butaca in butacas)
@@ -39,7 +51,7 @@ else
                 </div>
             }
         </div>
-        <button type="submit" class="btn btn-primary mt-3">Confirmar Reserva</button>
+        <button type="submit" class="btn btn-primary mt-3">Confirmar reserva por @Money.Format(funcion.PrecioFinal)</button>
         <a asp-controller="Funcion" asp-action="Index" class="btn btn-secondary mt-3">Volver</a>
     </form>
 }

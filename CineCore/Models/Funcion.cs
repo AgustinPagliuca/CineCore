@@ -19,5 +19,11 @@
 
         public int LugaresDisponibles =>
             (Sala?.Capacidad ?? 0) - ReservasActivas;
+
+        public decimal ExtraTipoSala =>
+            Sala?.TipoSala?.PrecioExtra ?? 0m;
+
+        public decimal PrecioFinal =>
+            Precio + ExtraTipoSala;
     }
 }

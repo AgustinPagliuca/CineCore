@@ -47,6 +47,10 @@ namespace CineCore.Data
             builder.Entity<TipoSala>()
                 .Property(t => t.PrecioExtra)
                 .HasColumnType("decimal(10,2)");
+
+            builder.Entity<Reserva>()
+                .Property(r => r.PrecioPagado)
+                .HasColumnType("decimal(10,2)");
         }
     }
 }
