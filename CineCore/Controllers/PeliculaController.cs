@@ -2,16 +2,10 @@
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CineCore.Controllers
 {
-    [Authorize(Roles = Roles.Empleado)]
     public class PeliculaController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -21,133 +15,170 @@ namespace CineCore.Controllers
             _context = context;
         }
 
-        // GET: Pelicula
+        // Público
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Peliculas.ToListAsync());
+            var peliculas = await _context.Peliculas
+                .Include(p => p.Generos)
+                .ToListAsync();
+            return View(peliculas);
         }
 
-        // GET: Pelicula/Details/5
+        // Público
         public async Task<IActionResult> Details(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var pelicula = await _context.Peliculas
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (pelicula == null)
+            else
             {
-                return NotFound();
+                var pelicula = await _context.Peliculas
+                    .Include(p => p.Generos)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (pelicula == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    result = View(pelicula);
+                }
             }
 
-            return View(pelicula);
+            return result;
         }
 
-        // GET: Pelicula/Create
+        [Authorize(Roles = Roles.Empleado)]
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Pelicula/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        [Authorize(Roles = Roles.Empleado)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Titulo,Duracion,Clasificacion,Sinopsis,ImagenUrl")] Pelicula pelicula)
         {
+            IActionResult result;
+
             if (ModelState.IsValid)
             {
                 _context.Add(pelicula);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                result = RedirectToAction(nameof(Index));
             }
-            return View(pelicula);
+            else
+            {
+                result = View(pelicula);
+            }
+
+            return result;
         }
 
-        // GET: Pelicula/Edit/5
+        [Authorize(Roles = Roles.Empleado)]
         public async Task<IActionResult> Edit(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
+            }
+            else
+            {
+                var pelicula = await _context.Peliculas.FindAsync(id);
+                if (pelicula == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    result = View(pelicula);
+                }
             }
 
-            var pelicula = await _context.Peliculas.FindAsync(id);
-            if (pelicula == null)
-            {
-                return NotFound();
-            }
-            return View(pelicula);
+            return result;
         }
 
-        // POST: Pelicula/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+        [Authorize(Roles = Roles.Empleado)]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Titulo,Duracion,Clasificacion,Sinopsis,ImagenUrl")] Pelicula pelicula)
         {
+            IActionResult result;
+
             if (id != pelicula.Id)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            if (ModelState.IsValid)
+            else if (!ModelState.IsValid)
+            {
+                result = View(pelicula);
+            }
+            else
             {
                 try
                 {
                     _context.Update(pelicula);
                     await _context.SaveChangesAsync();
+                    result = RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!PeliculaExists(pelicula.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
+                    if (PeliculaExists(pelicula.Id))
                     {
                         throw;
                     }
+                    result = NotFound();
                 }
-                return RedirectToAction(nameof(Index));
             }
-            return View(pelicula);
+
+            return result;
         }
 
-        // GET: Pelicula/Delete/5
+        [Authorize(Roles = Roles.Empleado)]
         public async Task<IActionResult> Delete(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var pelicula = await _context.Peliculas
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (pelicula == null)
+            else
             {
-                return NotFound();
+                var pelicula = await _context.Peliculas
+                    .FirstOrDefaultAsync(m => m.Id == id);
+                if (pelicula == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    result = View(pelicula);
+                }
             }
 
-            return View(pelicula);
+            return result;
         }
 
-        // POST: Pelicula/Delete/5
+        [Authorize(Roles = Roles.Empleado)]
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var pelicula = await _context.Peliculas.FindAsync(id);
+
             if (pelicula != null)
             {
                 _context.Peliculas.Remove(pelicula);
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 

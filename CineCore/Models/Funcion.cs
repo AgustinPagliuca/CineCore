@@ -14,6 +14,10 @@
 
         public ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
 
-        public int LugaresDisponibles => Sala?.Capacidad - Reservas.Count ?? 0;
+        public int ReservasActivas =>
+            Reservas.Count(r => r.Estado != EstadoReserva.Cancelada);
+
+        public int LugaresDisponibles =>
+            (Sala?.Capacidad ?? 0) - ReservasActivas;
     }
 }
