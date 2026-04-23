@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using CineCore.Data;
+using CineCore.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using CineCore.Data;
-using CineCore.Models;
 
 namespace CineCore.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = Roles.Cliente)]
     public class ReservaController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -22,13 +22,15 @@ namespace CineCore.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
+
             var reservas = await _context.Reservas
                 .Include(r => r.Funcion)
-                    .ThenInclude(f => f.Pelicula)
+                    .ThenInclude(f => f!.Pelicula)
                 .Include(r => r.Funcion)
-                    .ThenInclude(f => f.Sala)
+                    .ThenInclude(f => f!.Sala)
                 .Include(r => r.Butaca)
                 .Where(r => r.ClienteId == userId)
+                .OrderByDescending(r => r.FechaReserva)
                 .ToListAsync();
 
             return View(reservas);
@@ -36,25 +38,38 @@ namespace CineCore.Controllers
 
         public async Task<IActionResult> Crear(int funcionId)
         {
+            IActionResult result;
+
             var funcion = await _context.Funciones
                 .Include(f => f.Pelicula)
                 .Include(f => f.Sala)
-                    .ThenInclude(s => s.Butacas)
+                    .ThenInclude(s => s!.Butacas)
                 .Include(f => f.Reservas)
                 .FirstOrDefaultAsync(f => f.Id == funcionId);
 
             if (funcion == null)
-                return NotFound();
+            {
+                result = NotFound();
+            }
+            else
+            {
+                var butacasOcupadas = funcion.Reservas
+                    .Where(r => r.Estado != EstadoReserva.Cancelada)
+                    .Select(r => r.ButacaId)
+                    .ToHashSet();
 
-            var butacasOcupadas = funcion.Reservas.Select(r => r.ButacaId).ToList();
-            var butacasDisponibles = funcion.Sala.Butacas
-                .Where(b => !butacasOcupadas.Contains(b.Id))
-                .ToList();
+                var butacasDisponibles = funcion.Sala!.Butacas
+                    .Where(b => !butacasOcupadas.Contains(b.Id))
+                    .OrderBy(b => b.Fila)
+                    .ThenBy(b => b.Numero)
+                    .ToList();
 
-            ViewBag.Funcion = funcion;
-            ViewBag.ButacasDisponibles = butacasDisponibles;
+                ViewBag.Funcion = funcion;
+                ViewBag.ButacasDisponibles = butacasDisponibles;
+                result = View();
+            }
 
-            return View();
+            return result;
         }
 
         [HttpPost]
@@ -62,46 +77,69 @@ namespace CineCore.Controllers
         public async Task<IActionResult> Crear(int funcionId, int butacaId)
         {
             var userId = _userManager.GetUserId(User);
+            IActionResult result;
 
-            var yaReservada = await _context.Reservas
-                .AnyAsync(r => r.FuncionId == funcionId && r.ButacaId == butacaId);
+            var butacaOcupada = await _context.Reservas.AnyAsync(r =>
+                r.FuncionId == funcionId
+                && r.ButacaId == butacaId
+                && r.Estado != EstadoReserva.Cancelada);
 
-            if (yaReservada)
+            if (butacaOcupada)
             {
-                TempData["Error"] = "Esa butaca ya fue reservada.";
-                return RedirectToAction("Crear", new { funcionId });
+                TempData[TempKeys.Error] = "Esa butaca ya fue reservada.";
+                result = RedirectToAction(nameof(Crear), new { funcionId });
+            }
+            else
+            {
+                var reserva = new Reserva
+                {
+                    ClienteId = userId!,
+                    FuncionId = funcionId,
+                    ButacaId = butacaId,
+                    FechaReserva = DateTime.Now,
+                    Estado = EstadoReserva.Confirmada
+                };
+
+                _context.Reservas.Add(reserva);
+                await _context.SaveChangesAsync();
+
+                TempData[TempKeys.Exito] = "Reserva realizada con éxito.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            var reserva = new Reserva
-            {
-                ClienteId = userId!,
-                FuncionId = funcionId,
-                ButacaId = butacaId,
-                FechaReserva = DateTime.Now,
-                Estado = "Confirmada"
-            };
-
-            _context.Reservas.Add(reserva);
-            await _context.SaveChangesAsync();
-
-            TempData["Exito"] = "Reserva realizada con éxito.";
-            return RedirectToAction("Index");
+            return result;
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancelar(int id)
         {
             var userId = _userManager.GetUserId(User);
+            IActionResult result;
+
             var reserva = await _context.Reservas
                 .FirstOrDefaultAsync(r => r.Id == id && r.ClienteId == userId);
 
             if (reserva == null)
-                return NotFound();
+            {
+                result = NotFound();
+            }
+            else
+            {
+                reserva.Estado = EstadoReserva.Cancelada;
+                await _context.SaveChangesAsync();
 
-            reserva.Estado = "Cancelada";
-            await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = "Reserva cancelada.";
+                result = RedirectToAction(nameof(Index));
+            }
 
-            TempData["Exito"] = "Reserva cancelada.";
-            return RedirectToAction("Index");
+            return result;
+        }
+
+        private static class TempKeys
+        {
+            public const string Exito = "Exito";
+            public const string Error = "Error";
         }
     }
 }

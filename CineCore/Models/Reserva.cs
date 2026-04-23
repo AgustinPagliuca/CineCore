@@ -4,7 +4,7 @@
     {
         public int Id { get; set; }
         public DateTime FechaReserva { get; set; } = DateTime.Now;
-        public string Estado { get; set; } = "Pendiente";
+        public EstadoReserva Estado { get; set; } = EstadoReserva.Pendiente;
 
         public string ClienteId { get; set; } = string.Empty;
         public ApplicationUser? Cliente { get; set; }

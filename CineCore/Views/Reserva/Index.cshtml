@@ -2,6 +2,14 @@
 
 @{
     ViewData["Title"] = "Mis Reservas";
+
+    string BadgeClase(CineCore.Models.EstadoReserva estado) => estado switch
+    {
+        CineCore.Models.EstadoReserva.Confirmada => "bg-success",
+        CineCore.Models.EstadoReserva.Pendiente => "bg-warning text-dark",
+        CineCore.Models.EstadoReserva.Cancelada => "bg-secondary",
+        _ => "bg-secondary"
+    };
 }
 
 <h2>Mis Reservas</h2>
@@ -9,6 +17,10 @@
 @if (TempData["Exito"] != null)
 {
     <div class="alert alert-success">@TempData["Exito"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
 @if (!Model.Any())
@@ -32,23 +44,22 @@ else
             @foreach (var r in Model)
             {
                 <tr>
-                    <td>@r.Funcion.Pelicula.Titulo</td>
+                    <td>@r.Funcion!.Pelicula!.Titulo</td>
                     <td>@r.Funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
-                    <td>@r.Funcion.Sala.Numero</td>
-                    <td>@r.Butaca.Fila - @r.Butaca.Numero</td>
+                    <td>@r.Funcion.Sala!.Numero</td>
+                    <td>@r.Butaca!.Fila@r.Butaca.Numero</td>
                     <td>
-                        <span class="badge @(r.Estado == "Confirmada" ? "bg-success" : "bg-secondary")">
-                            @r.Estado
-                        </span>
+                        <span class="badge @BadgeClase(r.Estado)">@r.Estado</span>
                     </td>
                     <td>
-                        @if (r.Estado == "Confirmada")
+                        @if (r.Estado == CineCore.Models.EstadoReserva.Confirmada)
                         {
-                            <a asp-action="Cancelar" asp-route-id="@r.Id"
-                                   class="btn btn-sm btn-danger"
-                                   onclick="return confirm('¿Cancelar esta reserva?')">
-                                Cancelar
-                            </a>
+                            <form asp-action="Cancelar" asp-route-id="@r.Id"
+                                  method="post" class="d-inline"
+                                  onsubmit="return confirm('¿Cancelar esta reserva?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-sm btn-danger">Cancelar</button>
+                            </form>
                         }
                     </td>
                 </tr>
