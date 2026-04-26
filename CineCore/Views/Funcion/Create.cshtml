@@ -1,46 +1,50 @@
 ﻿@model CineCore.Models.Funcion
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Nueva función";
 }
 
-<h1>Create</h1>
+<h1>Nueva función</h1>
 
-<h4>Funcion</h4>
 <hr />
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <form asp-action="Create">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
+
+            <div class="form-group mb-3">
                 <label asp-for="FechaHora" class="control-label"></label>
-                <input asp-for="FechaHora" class="form-control" />
+                <input asp-for="FechaHora" class="form-control" type="datetime-local" />
                 <span asp-validation-for="FechaHora" class="text-danger"></span>
             </div>
-            <div class="form-group">
+
+            <div class="form-group mb-3">
                 <label asp-for="Precio" class="control-label"></label>
-                <input asp-for="Precio" class="form-control" />
+                @Html.EditorFor(m => m.Precio)
+                <small class="form-text text-muted">Usá punto para decimales (ej: 1500.50).</small>
                 <span asp-validation-for="Precio" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="PeliculaId" class="control-label"></label>
-                <select asp-for="PeliculaId" class ="form-control" asp-items="ViewBag.PeliculaId"></select>
+
+            <div class="form-group mb-3">
+                <label asp-for="PeliculaId" class="control-label">Película</label>
+                <select asp-for="PeliculaId" class="form-control" asp-items="ViewBag.PeliculaId"></select>
             </div>
-            <div class="form-group">
-                <label asp-for="SalaId" class="control-label"></label>
-                <select asp-for="SalaId" class ="form-control" asp-items="ViewBag.SalaId"></select>
+
+            <div class="form-group mb-3">
+                <label asp-for="SalaId" class="control-label">Sala</label>
+                <select asp-for="SalaId" class="form-control" asp-items="ViewBag.SalaId"></select>
             </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
+
+            <div class="form-group mt-4">
+                <input type="submit" value="Crear" class="btn btn-primary" />
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

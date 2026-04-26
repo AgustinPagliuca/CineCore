@@ -10,6 +10,8 @@ namespace CineCore.Controllers
     [Authorize(Roles = Roles.Cliente)]
     public class ReservaController : Controller
     {
+        public const int MaximoButacasPorReserva = 8;
+
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -63,12 +65,11 @@ namespace CineCore.Controllers
 
                 var butacasDisponibles = funcion.Sala!.Butacas
                     .Where(b => !butacasOcupadas.Contains(b.Id))
-                    .OrderBy(b => b.Fila)
-                    .ThenBy(b => b.Numero)
                     .ToList();
 
                 ViewBag.Funcion = funcion;
                 ViewBag.ButacasDisponibles = butacasDisponibles;
+                ViewBag.MaximoButacasPorReserva = MaximoButacasPorReserva;
                 result = View();
             }
 
@@ -77,47 +78,95 @@ namespace CineCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Crear(int funcionId, int butacaId)
+        public async Task<IActionResult> Crear(int funcionId, int[] butacaIds)
         {
             var userId = _userManager.GetUserId(User);
             IActionResult result;
+
+            var cantidad = butacaIds?.Length ?? 0;
+            var cantidadInvalida = cantidad < 1 || cantidad > MaximoButacasPorReserva;
 
             var funcion = await _context.Funciones
                 .Include(f => f.Sala)
                     .ThenInclude(s => s!.TipoSala)
                 .FirstOrDefaultAsync(f => f.Id == funcionId);
 
-            var butacaOcupada = await _context.Reservas.AnyAsync(r =>
-                r.FuncionId == funcionId
-                && r.ButacaId == butacaId
-                && r.Estado != EstadoReserva.Cancelada);
-
             if (funcion == null)
             {
                 result = NotFound();
             }
-            else if (butacaOcupada)
+            else if (cantidadInvalida)
             {
-                TempData[TempKeys.Error] = "Esa butaca ya fue reservada.";
+                TempData[TempKeys.Error] = $"Tenés que seleccionar entre 1 y {MaximoButacasPorReserva} butacas.";
                 result = RedirectToAction(nameof(Crear), new { funcionId });
             }
             else
             {
-                var reserva = new Reserva
+                result = await IntentarCrearReservas(funcion, butacaIds!, userId!);
+            }
+
+            return result;
+        }
+
+        private async Task<IActionResult> IntentarCrearReservas(Funcion funcion, int[] butacaIds, string userId)
+        {
+            IActionResult result;
+
+            var butacasPertenecenALaSala = await _context.Butacas
+                .Where(b => butacaIds.Contains(b.Id) && b.SalaId == funcion.SalaId)
+                .CountAsync();
+
+            var hayAlgunaOcupada = await _context.Reservas.AnyAsync(r =>
+                r.FuncionId == funcion.Id
+                && butacaIds.Contains(r.ButacaId)
+                && r.Estado != EstadoReserva.Cancelada);
+
+            if (butacasPertenecenALaSala != butacaIds.Length)
+            {
+                TempData[TempKeys.Error] = "Alguna de las butacas seleccionadas no pertenece a esta sala.";
+                result = RedirectToAction(nameof(Crear), new { funcionId = funcion.Id });
+            }
+            else if (hayAlgunaOcupada)
+            {
+                TempData[TempKeys.Error] = "Alguna de las butacas ya fue reservada por otro cliente. Elegí nuevamente.";
+                result = RedirectToAction(nameof(Crear), new { funcionId = funcion.Id });
+            }
+            else
+            {
+                var momento = DateTime.Now;
+                var precioUnitario = funcion.PrecioFinal;
+
+                using var transaccion = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    ClienteId = userId!,
-                    FuncionId = funcionId,
-                    ButacaId = butacaId,
-                    FechaReserva = DateTime.Now,
-                    Estado = EstadoReserva.Confirmada,
-                    PrecioPagado = funcion.PrecioFinal
-                };
+                    foreach (var butacaId in butacaIds)
+                    {
+                        var reserva = new Reserva
+                        {
+                            ClienteId = userId,
+                            FuncionId = funcion.Id,
+                            ButacaId = butacaId,
+                            FechaReserva = momento,
+                            Estado = EstadoReserva.Confirmada,
+                            PrecioPagado = precioUnitario
+                        };
+                        _context.Reservas.Add(reserva);
+                    }
 
-                _context.Reservas.Add(reserva);
-                await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync();
+                    await transaccion.CommitAsync();
 
-                TempData[TempKeys.Exito] = "Reserva realizada con éxito.";
-                result = RedirectToAction(nameof(Index));
+                    TempData[TempKeys.Exito] = butacaIds.Length == 1
+                        ? "Reserva realizada con éxito."
+                        : $"Se reservaron {butacaIds.Length} butacas con éxito.";
+                    result = RedirectToAction(nameof(Index));
+                }
+                catch (DbUpdateException)
+                {
+                    await transaccion.RollbackAsync();
+                    TempData[TempKeys.Error] = "No se pudo completar la reserva. Intentá nuevamente.";
+                    result = RedirectToAction(nameof(Crear), new { funcionId = funcion.Id });
+                }
             }
 
             return result;
@@ -143,6 +192,41 @@ namespace CineCore.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData[TempKeys.Exito] = "Reserva cancelada.";
+                result = RedirectToAction(nameof(Index));
+            }
+
+            return result;
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CancelarGrupo(int funcionId, DateTime fecha)
+        {
+            var userId = _userManager.GetUserId(User);
+            IActionResult result;
+
+            var reservasDelGrupo = await _context.Reservas
+                .Where(r => r.ClienteId == userId
+                         && r.FuncionId == funcionId
+                         && r.FechaReserva == fecha
+                         && r.Estado != EstadoReserva.Cancelada)
+                .ToListAsync();
+
+            if (!reservasDelGrupo.Any())
+            {
+                result = NotFound();
+            }
+            else
+            {
+                foreach (var reserva in reservasDelGrupo)
+                {
+                    reserva.Estado = EstadoReserva.Cancelada;
+                }
+                await _context.SaveChangesAsync();
+
+                TempData[TempKeys.Exito] = reservasDelGrupo.Count == 1
+                    ? "Reserva cancelada."
+                    : $"Se cancelaron {reservasDelGrupo.Count} butacas.";
                 result = RedirectToAction(nameof(Index));
             }
 

@@ -1,23 +1,34 @@
 ﻿@{
-    ViewData["Title"] = "Elegí tu butaca";
+    ViewData["Title"] = "Elegí tus butacas";
     var funcion = ViewBag.Funcion as CineCore.Models.Funcion;
-    var butacas = ViewBag.ButacasDisponibles as List<CineCore.Models.Butaca>;
+    var butacasDisponibles = ViewBag.ButacasDisponibles as List<CineCore.Models.Butaca>;
+    var maximo = (int)ViewBag.MaximoButacasPorReserva;
+
+    var butacasPorFila = funcion!.Sala!.Butacas
+        .GroupBy(b => b.Fila)
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    var idsDisponibles = butacasDisponibles!.Select(b => b.Id).ToHashSet();
 }
 
-<h2>Reservar - @funcion!.Pelicula!.Titulo</h2>
+<h2>Reservar — @funcion.Pelicula!.Titulo</h2>
 
 <div class="card mb-3">
     <div class="card-body">
-        <p class="mb-1"><strong>Fecha:</strong> @funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</p>
-        <p class="mb-1"><strong>Sala:</strong> @funcion.Sala!.Numero (@funcion.Sala.TipoSala!.Nombre)</p>
+        <p class="mb-1"><strong>Fecha:</strong> @funcion.FechaHora.ToString("dddd dd/MM/yyyy HH:mm")</p>
+        <p class="mb-1"><strong>Sala:</strong> @funcion.Sala.Numero (@funcion.Sala.TipoSala!.Nombre)</p>
         <p class="mb-1">
-            <strong>Precio:</strong> @Money.Format(funcion.PrecioFinal)
+            <strong>Precio por butaca:</strong> @Money.Format(funcion.PrecioFinal)
             @if (funcion.ExtraTipoSala > 0)
             {
                 <small class="text-muted">
                     — @Money.Format(funcion.Precio) base + @Money.Format(funcion.ExtraTipoSala) por @funcion.Sala.TipoSala.Nombre
                 </small>
             }
+        </p>
+        <p class="mb-0 text-muted small">
+            <em>Podés reservar hasta @maximo butacas en una sola operación.</em>
         </p>
     </div>
 </div>
@@ -27,31 +38,157 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-@if (butacas == null || !butacas.Any())
+@if (!butacasDisponibles!.Any())
 {
     <div class="alert alert-warning">No hay butacas disponibles para esta función.</div>
 }
 else
 {
-    <h4>Seleccioná una butaca:</h4>
-    <form method="post" asp-action="Crear">
+    <form method="post" asp-action="Crear" id="formReserva">
         @Html.AntiForgeryToken()
         <input type="hidden" name="funcionId" value="@funcion.Id" />
-        <div class="row">
-            @foreach (var butaca in butacas)
-            {
-                <div class="col-md-1 mb-2">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="butacaId"
-                               value="@butaca.Id" id="b@(butaca.Id)" required />
-                        <label class="form-check-label" for="b@(butaca.Id)">
-                            @butaca.Fila@butaca.Numero
-                        </label>
+
+        <div class="mapa-sala"
+             data-precio-unitario="@funcion.PrecioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+             data-maximo="@maximo">
+
+            <div class="mapa-pantalla-wrap">
+                <div class="mapa-pantalla"></div>
+                <div class="mapa-pantalla-label">Pantalla</div>
+            </div>
+
+            <div class="mapa-filas">
+                @foreach (var grupo in butacasPorFila)
+                {
+                    var butacasOrdenadas = grupo.OrderBy(b => b.Numero).ToList();
+                    var mitad = butacasOrdenadas.Count / 2;
+
+                    <div class="mapa-fila">
+                        <span class="mapa-fila-label">@grupo.Key</span>
+
+                        @for (var i = 0; i < butacasOrdenadas.Count; i++)
+                        {
+                            var butaca = butacasOrdenadas[i];
+                            var estaDisponible = idsDisponibles.Contains(butaca.Id);
+                            var etiqueta = $"{butaca.Fila}{butaca.Numero}";
+
+                            if (estaDisponible)
+                            {
+                                <input type="checkbox" name="butacaIds" value="@butaca.Id"
+                                       id="btc-@butaca.Id" class="mapa-butaca-input"
+                                       data-etiqueta="@etiqueta" />
+                                <label for="btc-@butaca.Id"
+                                       class="mapa-butaca mapa-butaca-disponible"
+                                       title="Butaca @etiqueta">@butaca.Numero</label>
+                            }
+                            else
+                            {
+                                <span class="mapa-butaca mapa-butaca-ocupada"
+                                      title="Butaca @etiqueta (ocupada)"
+                                      aria-label="Butaca @etiqueta ocupada">@butaca.Numero</span>
+                            }
+
+                            @if (i == mitad - 1)
+                            {
+                                <span class="mapa-pasillo" aria-hidden="true"></span>
+                            }
+                        }
+
+                        <span class="mapa-fila-label">@grupo.Key</span>
                     </div>
+                }
+            </div>
+
+            <div class="mapa-leyenda">
+                <div class="mapa-leyenda-item">
+                    <span class="mapa-leyenda-caja disponible"></span> Disponible
                 </div>
-            }
+                <div class="mapa-leyenda-item">
+                    <span class="mapa-leyenda-caja seleccionada"></span> Tu selección
+                </div>
+                <div class="mapa-leyenda-item">
+                    <span class="mapa-leyenda-caja ocupada"></span> Ocupada
+                </div>
+            </div>
+
+            <div class="mapa-resumen mapa-resumen-vacio" id="mapaResumen">
+                <span id="mapaResumenMensaje">Elegí al menos una butaca para continuar</span>
+                <span class="mapa-resumen-detalle" id="mapaResumenDetalle"></span>
+                <span class="mapa-resumen-total" id="mapaResumenTotal"></span>
+            </div>
         </div>
-        <button type="submit" class="btn btn-primary mt-3">Confirmar reserva por @Money.Format(funcion.PrecioFinal)</button>
-        <a asp-controller="Funcion" asp-action="Index" class="btn btn-secondary mt-3">Volver</a>
+
+        <div class="d-flex justify-content-center gap-2 mt-4">
+            <a asp-controller="Funcion" asp-action="Index" class="btn btn-outline-secondary">Volver</a>
+            <button type="submit" class="btn btn-primary" id="btnConfirmar" disabled>
+                Confirmar reserva
+            </button>
+        </div>
     </form>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            const mapa = document.querySelector('.mapa-sala');
+            if (!mapa) return;
+
+            const precioUnitario = parseFloat(mapa.dataset.precioUnitario);
+            const maximo = parseInt(mapa.dataset.maximo, 10);
+
+            const checks = mapa.querySelectorAll('.mapa-butaca-input');
+            const resumenContenedor = document.getElementById('mapaResumen');
+            const resumenMensaje = document.getElementById('mapaResumenMensaje');
+            const resumenDetalle = document.getElementById('mapaResumenDetalle');
+            const resumenTotal = document.getElementById('mapaResumenTotal');
+            const btnConfirmar = document.getElementById('btnConfirmar');
+
+            const formatoMoneda = new Intl.NumberFormat('es-AR', {
+                style: 'currency',
+                currency: 'ARS',
+                minimumFractionDigits: 2
+            });
+
+            function actualizar() {
+                const seleccionados = Array.from(checks).filter(c => c.checked);
+                const cantidad = seleccionados.length;
+                const etiquetas = seleccionados
+                    .map(c => c.dataset.etiqueta)
+                    .sort();
+
+                const topeAlcanzado = cantidad >= maximo;
+                checks.forEach(function (c) {
+                    const label = c.nextElementSibling;
+                    if (!c.checked && topeAlcanzado) {
+                        c.disabled = true;
+                        label.classList.add('mapa-butaca-bloqueada');
+                    } else {
+                        c.disabled = false;
+                        label.classList.remove('mapa-butaca-bloqueada');
+                    }
+                });
+
+                if (cantidad === 0) {
+                    resumenContenedor.classList.add('mapa-resumen-vacio');
+                    resumenMensaje.textContent = 'Elegí al menos una butaca para continuar';
+                    resumenDetalle.textContent = '';
+                    resumenTotal.textContent = '';
+                    btnConfirmar.disabled = true;
+                    btnConfirmar.textContent = 'Confirmar reserva';
+                } else {
+                    resumenContenedor.classList.remove('mapa-resumen-vacio');
+                    const plural = cantidad === 1 ? 'butaca' : 'butacas';
+                    resumenMensaje.textContent = `${cantidad} ${plural} seleccionada${cantidad === 1 ? '' : 's'}`;
+                    resumenDetalle.textContent = etiquetas.join(' · ');
+                    const total = precioUnitario * cantidad;
+                    resumenTotal.textContent = 'Total: ' + formatoMoneda.format(total);
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.textContent = `Confirmar reserva por ${formatoMoneda.format(total)}`;
+                }
+            }
+
+            checks.forEach(c => c.addEventListener('change', actualizar));
+            actualizar();
+        })();
+    </script>
 }

@@ -1,9 +1,16 @@
-﻿namespace CineCore.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace CineCore.Models
 {
     public class Funcion
     {
         public int Id { get; set; }
+
+        [Display(Name = "Fecha y hora")]
         public DateTime FechaHora { get; set; }
+
+        [Display(Name = "Precio base")]
+        [DisplayFormat(DataFormatString = "{0:0.00}", ApplyFormatInEditMode = true)]
         public decimal Precio { get; set; }
 
         public int PeliculaId { get; set; }

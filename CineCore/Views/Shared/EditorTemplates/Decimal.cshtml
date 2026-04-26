@@ -1,0 +1,18 @@
+﻿@model decimal?
+
+@{
+    var valor = Model.HasValue
+        ? Model.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+        : string.Empty;
+
+    var atributos = new Dictionary<string, object>
+    {
+        { "class", "form-control" },
+        { "type", "number" },
+        { "step", "0.01" },
+        { "min", "0" },
+        { "lang", "en" }
+    };
+}
+
+@Html.TextBox("", valor, atributos)
