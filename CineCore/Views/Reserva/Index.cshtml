@@ -1,20 +1,7 @@
-﻿@model IEnumerable<CineCore.Models.Reserva>
+﻿@model CineCore.Models.ViewModels.MisReservasViewModel
 
 @{
     ViewData["Title"] = "Mis Reservas";
-
-    string BadgeClase(CineCore.Models.EstadoReserva estado) => estado switch
-    {
-        CineCore.Models.EstadoReserva.Confirmada => "bg-success",
-        CineCore.Models.EstadoReserva.Pendiente => "bg-warning text-dark",
-        CineCore.Models.EstadoReserva.Cancelada => "bg-secondary",
-        _ => "bg-secondary"
-    };
-
-    var grupos = Model
-        .GroupBy(r => new { r.FuncionId, r.FechaReserva })
-        .OrderByDescending(g => g.Key.FechaReserva)
-        .ToList();
 }
 
 <h2>Mis Reservas</h2>
@@ -28,91 +15,39 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-@if (!grupos.Any())
-{
-    <p>No tenés reservas aún. <a asp-controller="Funcion" asp-action="Index">Ver funciones disponibles</a></p>
-}
-else
-{
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th>Película</th>
-                <th>Fecha y Hora</th>
-                <th>Sala</th>
-                <th>Butacas</th>
-                <th>Total</th>
-                <th>Estado</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var grupo in grupos)
-            {
-                var primera = grupo.First();
-                var funcion = primera.Funcion!;
-                var butacas = grupo
-                    .OrderBy(r => r.Butaca!.Fila)
-                    .ThenBy(r => r.Butaca!.Numero)
-                    .ToList();
+<ul class="nav nav-tabs mb-3" id="reservasTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="tab-proximas" data-bs-toggle="tab"
+                data-bs-target="#panel-proximas" type="button" role="tab">
+            Próximas
+            <span class="badge bg-primary ms-1">@Model.Proximas.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-anteriores" data-bs-toggle="tab"
+                data-bs-target="#panel-anteriores" type="button" role="tab">
+            Anteriores
+            <span class="badge bg-secondary ms-1">@Model.Anteriores.Count</span>
+        </button>
+    </li>
+</ul>
 
-                var activas = butacas.Where(r => r.Estado != CineCore.Models.EstadoReserva.Cancelada).ToList();
-                var todasCanceladas = !activas.Any();
-                var estadoGrupo = todasCanceladas
-                    ? CineCore.Models.EstadoReserva.Cancelada
-                    : CineCore.Models.EstadoReserva.Confirmada;
+<div class="tab-content" id="reservasTabsContent">
+    <div class="tab-pane fade show active" id="panel-proximas" role="tabpanel">
+        <partial name="_TablaReservas" model="@(new CineCore.Models.ViewModels.TablaReservasContext
+                                               {
+                                                   Reservas = Model.Proximas,
+                                                   MensajeVacio = "No tenés reservas próximas. Mirá la cartelera para encontrar algo.",
+                                                   PermiteCancelar = true
+                                               })" />
+    </div>
 
-                var total = activas.Sum(r => r.PrecioPagado);
-                var totalOriginal = butacas.Sum(r => r.PrecioPagado);
-
-                <tr>
-                    <td>@funcion.Pelicula!.Titulo</td>
-                    <td>@funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
-                    <td>Sala @funcion.Sala!.Numero (@funcion.Sala.TipoSala!.Nombre)</td>
-                    <td>
-                        @string.Join(", ", butacas.Select(r => $"{r.Butaca!.Fila}{r.Butaca.Numero}"))
-                        @if (butacas.Count > 1)
-                        {
-                            <br />
-                            <small class="text-muted">@butacas.Count butacas</small>
-                        }
-                    </td>
-                    <td>
-                        @if (todasCanceladas)
-                        {
-                            <span class="text-muted text-decoration-line-through">@Money.Format(totalOriginal)</span>
-                        }
-                        else
-                        {
-                            <strong>@Money.Format(total)</strong>
-                            @if (activas.Count != butacas.Count)
-                            {
-                                <br />
-                                <small class="text-muted">
-                                    (@(butacas.Count - activas.Count) cancelada@((butacas.Count - activas.Count) == 1 ? "" : "s"))
-                                </small>
-                            }
-                        }
-                    </td>
-                    <td>
-                        <span class="badge @BadgeClase(estadoGrupo)">@estadoGrupo</span>
-                    </td>
-                    <td>
-                        @if (!todasCanceladas)
-                        {
-                            <form asp-action="CancelarGrupo" method="post" class="d-inline"
-                                  onsubmit="return confirm('¿Cancelar @(activas.Count == 1 ? "esta reserva" : $"las {activas.Count} butacas de esta reserva")?');">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="funcionId" value="@primera.FuncionId" />
-                                <input type="hidden" name="fecha" value="@primera.FechaReserva.ToString("o")" />
-                                <button type="submit" class="btn btn-sm btn-danger">
-                                    Cancelar@(activas.Count > 1 ? " todo" : "")
-                                </button>
-                            </form>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    <div class="tab-pane fade" id="panel-anteriores" role="tabpanel">
+        <partial name="_TablaReservas" model="@(new CineCore.Models.ViewModels.TablaReservasContext
+                                               {
+                                                   Reservas = Model.Anteriores,
+                                                   MensajeVacio = "Todavía no hay funciones pasadas en tu historial.",
+                                                   PermiteCancelar = false
+                                               })" />
+    </div>
+</div>

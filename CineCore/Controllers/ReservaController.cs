@@ -1,5 +1,6 @@
 ﻿using CineCore.Data;
 using CineCore.Models;
+using CineCore.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ namespace CineCore.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
+            var ahora = DateTime.Now;
 
             var reservas = await _context.Reservas
                 .Include(r => r.Funcion)
@@ -36,7 +38,17 @@ namespace CineCore.Controllers
                 .OrderByDescending(r => r.FechaReserva)
                 .ToListAsync();
 
-            return View(reservas);
+            var modelo = new MisReservasViewModel
+            {
+                Proximas = reservas
+                    .Where(r => r.Funcion!.FechaHora >= ahora)
+                    .ToList(),
+                Anteriores = reservas
+                    .Where(r => r.Funcion!.FechaHora < ahora)
+                    .ToList()
+            };
+
+            return View(modelo);
         }
 
         public async Task<IActionResult> Crear(int funcionId)
@@ -174,47 +186,30 @@ namespace CineCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Cancelar(int id)
-        {
-            var userId = _userManager.GetUserId(User);
-            IActionResult result;
-
-            var reserva = await _context.Reservas
-                .FirstOrDefaultAsync(r => r.Id == id && r.ClienteId == userId);
-
-            if (reserva == null)
-            {
-                result = NotFound();
-            }
-            else
-            {
-                reserva.Estado = EstadoReserva.Cancelada;
-                await _context.SaveChangesAsync();
-
-                TempData[TempKeys.Exito] = "Reserva cancelada.";
-                result = RedirectToAction(nameof(Index));
-            }
-
-            return result;
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CancelarGrupo(int funcionId, DateTime fecha)
         {
             var userId = _userManager.GetUserId(User);
             IActionResult result;
 
             var reservasDelGrupo = await _context.Reservas
+                .Include(r => r.Funcion)
                 .Where(r => r.ClienteId == userId
                          && r.FuncionId == funcionId
                          && r.FechaReserva == fecha
                          && r.Estado != EstadoReserva.Cancelada)
                 .ToListAsync();
 
+            var primera = reservasDelGrupo.FirstOrDefault();
+            var funcionYaPaso = primera?.Funcion?.FechaHora < DateTime.Now;
+
             if (!reservasDelGrupo.Any())
             {
                 result = NotFound();
+            }
+            else if (funcionYaPaso)
+            {
+                TempData[TempKeys.Error] = "No se pueden cancelar reservas de funciones que ya pasaron.";
+                result = RedirectToAction(nameof(Index));
             }
             else
             {
