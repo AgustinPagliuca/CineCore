@@ -2,66 +2,99 @@
 
 @{
     ViewData["Title"] = "Cartelera";
+    var ahora = DateTime.Now;
+    var esEmpleado = User.IsInRole(CineCore.Models.Roles.Empleado);
 }
 
-<h1>Cartelera</h1>
-
-@if (User.IsInRole(CineCore.Models.Roles.Empleado))
-{
-    <p>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Cartelera</h1>
+    @if (esEmpleado)
+    {
         <a asp-action="Create" class="btn btn-primary">Nueva Función</a>
-    </p>
-}
+    }
+</div>
 
-<table class="table table-striped align-middle">
-    <thead>
-        <tr>
-            <th>Fecha y Hora</th>
-            <th>Película</th>
-            <th>Sala</th>
-            <th>Tipo</th>
-            <th>Precio</th>
-            <th>Disponibles</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
+@if (!Model.Any())
+{
+    <div class="alert alert-info">
+        @if (esEmpleado)
         {
-            <tr>
-                <td>@item.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
-                <td>@item.Pelicula!.Titulo</td>
-                <td>Sala @item.Sala!.Numero</td>
-                <td>@item.Sala.TipoSala!.Nombre</td>
-                <td>
-                    <strong>@Money.Format(item.PrecioFinal)</strong>
-                    @if (item.ExtraTipoSala > 0)
-                    {
-                        <br />
-                        <small class="text-muted">
-                            @Money.Format(item.Precio) + @Money.Format(item.ExtraTipoSala) (@item.Sala.TipoSala.Nombre)
-                        </small>
-                    }
-                </td>
-                <td>@item.LugaresDisponibles / @item.Sala.Capacidad</td>
-                <td>
-                    @if (User.IsInRole(CineCore.Models.Roles.Empleado))
-                    {
-                        <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Editar</a>
-                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">Detalle</a>
-                        <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
-                    }
-                    @if (item.LugaresDisponibles > 0)
-                    {
-                        <a asp-controller="Reserva" asp-action="Crear" asp-route-funcionId="@item.Id"
-                           class="btn btn-sm btn-primary">Reservar</a>
-                    }
-                    else
-                    {
-                        <span class="badge bg-secondary">Sin lugares</span>
-                    }
-                </td>
-            </tr>
+            <text>No hay funciones cargadas. Creá la primera con el botón "Nueva Función".</text>
         }
-    </tbody>
-</table>
+        else
+        {
+            <text>Por el momento no hay funciones programadas. Volvé pronto.</text>
+        }
+    </div>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Fecha y Hora</th>
+                <th>Película</th>
+                <th>Sala</th>
+                <th>Tipo</th>
+                <th>Precio</th>
+                <th>Disponibles</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                var pasada = item.FechaHora < ahora;
+                var agotada = !pasada && item.LugaresDisponibles <= 0;
+                var filaClase = pasada ? "text-body-secondary opacity-75" : "";
+
+                <tr class="@filaClase">
+                    <td>@item.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        <a asp-controller="Pelicula" asp-action="Details" asp-route-id="@item.PeliculaId"
+                           class="text-reset">@item.Pelicula!.Titulo</a>
+                    </td>
+                    <td>Sala @item.Sala!.Numero</td>
+                    <td>@item.Sala.TipoSala!.Nombre</td>
+                    <td>
+                        <strong>@Money.Format(item.PrecioFinal)</strong>
+                        @if (item.ExtraTipoSala > 0)
+                        {
+                            <br />
+                            <small class="text-muted">
+                                @Money.Format(item.Precio) + @Money.Format(item.ExtraTipoSala) (@item.Sala.TipoSala.Nombre)
+                            </small>
+                        }
+                    </td>
+                    <td>
+                        @if (pasada)
+                        {
+                            <span class="badge bg-secondary">Pasada</span>
+                        }
+                        else if (agotada)
+                        {
+                            <span class="badge bg-danger">Agotada</span>
+                        }
+                        else
+                        {
+                            @($"{item.LugaresDisponibles} / {item.Sala.Capacidad}")
+                        }
+                    </td>
+                    <td>
+                        @if (esEmpleado && !pasada)
+                        {
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">Editar</a>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-info">Detalle</a>
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        }
+                        @if (!pasada && !agotada)
+                        {
+                            <a asp-controller="Reserva" asp-action="Crear" asp-route-funcionId="@item.Id"
+                               class="btn btn-sm btn-primary">Reservar</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

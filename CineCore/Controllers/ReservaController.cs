@@ -68,6 +68,11 @@ namespace CineCore.Controllers
             {
                 result = NotFound();
             }
+            else if (funcion.FechaHora < DateTime.Now)
+            {
+                TempData[TempKeys.Error] = "Esta función ya pasó. Elegí otra de la cartelera.";
+                result = RedirectToAction("Index", "Funcion");
+            }
             else
             {
                 var butacasOcupadas = funcion.Reservas
@@ -106,6 +111,11 @@ namespace CineCore.Controllers
             if (funcion == null)
             {
                 result = NotFound();
+            }
+            else if (funcion.FechaHora < DateTime.Now)
+            {
+                TempData[TempKeys.Error] = "Esta función ya pasó. Elegí otra de la cartelera.";
+                result = RedirectToAction("Index", "Funcion");
             }
             else if (cantidadInvalida)
             {

@@ -9,6 +9,8 @@ namespace CineCore.Controllers
 {
     public class FuncionController : Controller
     {
+        public static readonly TimeSpan PausaEntreFunciones = TimeSpan.FromMinutes(15);
+
         private readonly ApplicationDbContext _context;
 
         public FuncionController(ApplicationDbContext context)
@@ -16,13 +18,23 @@ namespace CineCore.Controllers
             _context = context;
         }
 
-        // Público - clientes y empleados pueden ver funciones
         public async Task<IActionResult> Index()
         {
-            var funciones = await _context.Funciones
+            var ahora = DateTime.Now;
+            var esEmpleado = User.IsInRole(Roles.Empleado);
+
+            var query = _context.Funciones
                 .Include(f => f.Pelicula)
                 .Include(f => f.Sala)
                     .ThenInclude(s => s!.TipoSala)
+                .AsQueryable();
+
+            if (!esEmpleado)
+            {
+                query = query.Where(f => f.FechaHora >= ahora);
+            }
+
+            var funciones = await query
                 .OrderBy(f => f.FechaHora)
                 .ToListAsync();
 
@@ -61,8 +73,7 @@ namespace CineCore.Controllers
         [Authorize(Roles = Roles.Empleado)]
         public IActionResult Create()
         {
-            ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo");
-            ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero");
+            CargarSelectLists();
             return View();
         }
 
@@ -73,17 +84,19 @@ namespace CineCore.Controllers
         {
             IActionResult result;
 
-            if (ModelState.IsValid)
+            await ValidarSolapamiento(funcion);
+
+            if (!ModelState.IsValid)
             {
-                _context.Add(funcion);
-                await _context.SaveChangesAsync();
-                result = RedirectToAction(nameof(Index));
+                CargarSelectLists(funcion.PeliculaId, funcion.SalaId);
+                result = View(funcion);
             }
             else
             {
-                ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
-                ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
-                result = View(funcion);
+                _context.Add(funcion);
+                await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = "Función creada con éxito.";
+                result = RedirectToAction(nameof(Index));
             }
 
             return result;
@@ -101,14 +114,19 @@ namespace CineCore.Controllers
             else
             {
                 var funcion = await _context.Funciones.FindAsync(id);
+
                 if (funcion == null)
                 {
                     result = NotFound();
                 }
+                else if (funcion.FechaHora < DateTime.Now)
+                {
+                    TempData[TempKeys.Error] = "No se pueden editar funciones que ya pasaron.";
+                    result = RedirectToAction(nameof(Index));
+                }
                 else
                 {
-                    ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
-                    ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
+                    CargarSelectLists(funcion.PeliculaId, funcion.SalaId);
                     result = View(funcion);
                 }
             }
@@ -127,27 +145,46 @@ namespace CineCore.Controllers
             {
                 result = NotFound();
             }
-            else if (!ModelState.IsValid)
-            {
-                ViewData["PeliculaId"] = new SelectList(_context.Peliculas, "Id", "Titulo", funcion.PeliculaId);
-                ViewData["SalaId"] = new SelectList(_context.Salas, "Id", "Numero", funcion.SalaId);
-                result = View(funcion);
-            }
             else
             {
-                try
+                var original = await _context.Funciones.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id);
+
+                if (original == null)
                 {
-                    _context.Update(funcion);
-                    await _context.SaveChangesAsync();
+                    result = NotFound();
+                }
+                else if (original.FechaHora < DateTime.Now)
+                {
+                    TempData[TempKeys.Error] = "No se pueden editar funciones que ya pasaron.";
                     result = RedirectToAction(nameof(Index));
                 }
-                catch (DbUpdateConcurrencyException)
+                else
                 {
-                    if (_context.Funciones.Any(e => e.Id == funcion.Id))
+                    await ValidarSolapamiento(funcion);
+
+                    if (!ModelState.IsValid)
                     {
-                        throw;
+                        CargarSelectLists(funcion.PeliculaId, funcion.SalaId);
+                        result = View(funcion);
                     }
-                    result = NotFound();
+                    else
+                    {
+                        try
+                        {
+                            _context.Update(funcion);
+                            await _context.SaveChangesAsync();
+                            TempData[TempKeys.Exito] = "Función actualizada.";
+                            result = RedirectToAction(nameof(Index));
+                        }
+                        catch (DbUpdateConcurrencyException)
+                        {
+                            if (_context.Funciones.Any(e => e.Id == funcion.Id))
+                            {
+                                throw;
+                            }
+                            result = NotFound();
+                        }
+                    }
                 }
             }
 
@@ -175,6 +212,11 @@ namespace CineCore.Controllers
                 {
                     result = NotFound();
                 }
+                else if (funcion.FechaHora < DateTime.Now)
+                {
+                    TempData[TempKeys.Error] = "No se pueden eliminar funciones que ya pasaron.";
+                    result = RedirectToAction(nameof(Index));
+                }
                 else
                 {
                     result = View(funcion);
@@ -189,15 +231,83 @@ namespace CineCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var funcion = await _context.Funciones.FindAsync(id);
+            IActionResult result;
 
-            if (funcion != null)
+            var funcion = await _context.Funciones
+                .Include(f => f.Reservas)
+                .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (funcion == null)
+            {
+                result = RedirectToAction(nameof(Index));
+            }
+            else if (funcion.FechaHora < DateTime.Now)
+            {
+                TempData[TempKeys.Error] = "No se pueden eliminar funciones que ya pasaron.";
+                result = RedirectToAction(nameof(Index));
+            }
+            else if (funcion.Reservas.Any(r => r.Estado != EstadoReserva.Cancelada))
+            {
+                TempData[TempKeys.Error] = "No se puede eliminar una función con reservas activas.";
+                result = RedirectToAction(nameof(Index));
+            }
+            else
             {
                 _context.Funciones.Remove(funcion);
                 await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = "Función eliminada.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction(nameof(Index));
+            return result;
+        }
+
+        private async Task ValidarSolapamiento(Funcion funcion)
+        {
+            var pelicula = await _context.Peliculas.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.Id == funcion.PeliculaId);
+
+            if (pelicula != null)
+            {
+                var inicioNueva = funcion.FechaHora;
+                var finNueva = inicioNueva.AddMinutes(pelicula.Duracion).Add(PausaEntreFunciones);
+
+                var funcionesEnLaSala = await _context.Funciones
+                    .Include(f => f.Pelicula)
+                    .AsNoTracking()
+                    .Where(f => f.SalaId == funcion.SalaId && f.Id != funcion.Id)
+                    .ToListAsync();
+
+                foreach (var existente in funcionesEnLaSala)
+                {
+                    var inicioExistente = existente.FechaHora;
+                    var finExistente = inicioExistente
+                        .AddMinutes(existente.Pelicula?.Duracion ?? 0)
+                        .Add(PausaEntreFunciones);
+
+                    var seSolapan = inicioNueva < finExistente && inicioExistente < finNueva;
+
+                    if (seSolapan)
+                    {
+                        ModelState.AddModelError(
+                            nameof(Funcion.FechaHora),
+                            $"La función se solapa con \"{existente.Pelicula?.Titulo}\" del " +
+                            $"{inicioExistente:dd/MM/yyyy HH:mm} en la misma sala.");
+                    }
+                }
+            }
+        }
+
+        private void CargarSelectLists(int? peliculaId = null, int? salaId = null)
+        {
+            ViewData["PeliculaId"] = new SelectList(_context.Peliculas.OrderBy(p => p.Titulo), "Id", "Titulo", peliculaId);
+            ViewData["SalaId"] = new SelectList(_context.Salas.OrderBy(s => s.Numero), "Id", "Numero", salaId);
+        }
+
+        private static class TempKeys
+        {
+            public const string Exito = "Exito";
+            public const string Error = "Error";
         }
     }
 }

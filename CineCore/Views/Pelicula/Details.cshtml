@@ -1,48 +1,124 @@
 ﻿@model CineCore.Models.Pelicula
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = Model.Titulo;
+    var tienePoster = !string.IsNullOrWhiteSpace(Model.ImagenUrl);
+    var funcionesFuturas = Model.Funciones.ToList();
+    var enCartelera = funcionesFuturas.Any();
 }
 
-<h1>Details</h1>
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="position-relative">
+            @if (!enCartelera)
+            {
+                <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2 fs-6"
+                      style="z-index: 3;">
+                    Próximamente
+                </span>
+            }
+            @if (tienePoster)
+            {
+                <img src="@Model.ImagenUrl" alt="Poster de @Model.Titulo"
+                     class="img-fluid rounded shadow-sm w-100" style="object-fit: cover; aspect-ratio: 2/3;" />
+            }
+            else
+            {
+                <div class="d-flex align-items-center justify-content-center bg-secondary-subtle rounded shadow-sm"
+                     style="aspect-ratio: 2/3;">
+                    <span class="text-muted">Sin imagen disponible</span>
+                </div>
+            }
+        </div>
+    </div>
 
-<div>
-    <h4>Pelicula</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Titulo)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Titulo)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Duracion)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Duracion)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Clasificacion)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Clasificacion)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Sinopsis)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Sinopsis)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ImagenUrl)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ImagenUrl)
-        </dd>
-    </dl>
+    <div class="col-md-8">
+        <h1 class="mb-3">@Model.Titulo</h1>
+
+        <div class="mb-3 d-flex flex-wrap gap-2">
+            <span class="badge bg-dark">@Model.Clasificacion</span>
+            <span class="badge bg-secondary">@Duracion.Format(Model.Duracion)</span>
+            @foreach (var genero in Model.Generos)
+            {
+                <span class="badge bg-info text-dark">@genero.Nombre</span>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Sinopsis))
+        {
+            <h5>Sinopsis</h5>
+            <p class="text-body-secondary">@Model.Sinopsis</p>
+        }
+
+        @if (User.IsInRole(CineCore.Models.Roles.Empleado))
+        {
+            <div class="mt-4">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary btn-sm">Editar</a>
+                <a asp-action="Index" class="btn btn-outline-primary btn-sm">Volver al listado</a>
+            </div>
+        }
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+
+<hr class="my-4" />
+
+<h3 class="mb-3">Funciones disponibles</h3>
+
+@if (!enCartelera)
+{
+    <div class="alert alert-warning">
+        <strong>Próximamente</strong> — esta película todavía no tiene funciones programadas.
+        Volvé pronto para ver los horarios disponibles.
+    </div>
+}
+else
+{
+    <div class="row">
+        @foreach (var funcion in funcionesFuturas)
+        {
+            var agotada = funcion.LugaresDisponibles <= 0;
+
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 @(agotada ? "opacity-75" : "")">
+                    <div class="card-body">
+                        <h5 class="card-title mb-1">@funcion.FechaHora.ToString("dddd dd/MM")</h5>
+                        <p class="card-subtitle text-body-secondary mb-3">
+                            @funcion.FechaHora.ToString("HH:mm") hs
+                        </p>
+
+                        <p class="mb-1">
+                            <strong>Sala @funcion.Sala!.Numero</strong>
+                            <span class="badge bg-info text-dark ms-1">@funcion.Sala.TipoSala!.Nombre</span>
+                        </p>
+                        <p class="mb-1">
+                            <strong>@Money.Format(funcion.PrecioFinal)</strong>
+                            @if (funcion.ExtraTipoSala > 0)
+                            {
+                                <small class="text-muted d-block">
+                                    @Money.Format(funcion.Precio) + @Money.Format(funcion.ExtraTipoSala) (@funcion.Sala.TipoSala.Nombre)
+                                </small>
+                            }
+                        </p>
+
+                        @if (agotada)
+                        {
+                            <p class="mb-3">
+                                <span class="badge bg-danger">Agotada</span>
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="mb-3">
+                                <small>
+                                    @funcion.LugaresDisponibles de @funcion.Sala.Capacidad lugares disponibles
+                                </small>
+                            </p>
+                            <a asp-controller="Reserva" asp-action="Crear" asp-route-funcionId="@funcion.Id"
+                               class="btn btn-primary w-100">Reservar</a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

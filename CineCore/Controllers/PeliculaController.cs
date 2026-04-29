@@ -15,16 +15,26 @@ namespace CineCore.Controllers
             _context = context;
         }
 
-        // Público
         public async Task<IActionResult> Index()
         {
+            var ahora = DateTime.Now;
+
             var peliculas = await _context.Peliculas
                 .Include(p => p.Generos)
+                .Include(p => p.Funciones)
+                .OrderBy(p => p.Titulo)
                 .ToListAsync();
+
+            var idsConFuncionesFuturas = peliculas
+                .Where(p => p.Funciones.Any(f => f.FechaHora >= ahora))
+                .Select(p => p.Id)
+                .ToHashSet();
+
+            ViewBag.IdsConFuncionesFuturas = idsConFuncionesFuturas;
+
             return View(peliculas);
         }
 
-        // Público
         public async Task<IActionResult> Details(int? id)
         {
             IActionResult result;
@@ -37,6 +47,9 @@ namespace CineCore.Controllers
             {
                 var pelicula = await _context.Peliculas
                     .Include(p => p.Generos)
+                    .Include(p => p.Funciones.Where(f => f.FechaHora >= DateTime.Now))
+                        .ThenInclude(f => f.Sala!)
+                            .ThenInclude(s => s.TipoSala)
                     .FirstOrDefaultAsync(m => m.Id == id);
 
                 if (pelicula == null)
@@ -45,6 +58,10 @@ namespace CineCore.Controllers
                 }
                 else
                 {
+                    pelicula.Funciones = pelicula.Funciones
+                        .OrderBy(f => f.FechaHora)
+                        .ToList();
+
                     result = View(pelicula);
                 }
             }
@@ -69,6 +86,7 @@ namespace CineCore.Controllers
             {
                 _context.Add(pelicula);
                 await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = $"Película \"{pelicula.Titulo}\" creada.";
                 result = RedirectToAction(nameof(Index));
             }
             else
@@ -125,6 +143,7 @@ namespace CineCore.Controllers
                 {
                     _context.Update(pelicula);
                     await _context.SaveChangesAsync();
+                    TempData[TempKeys.Exito] = "Película actualizada.";
                     result = RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
@@ -152,13 +171,16 @@ namespace CineCore.Controllers
             else
             {
                 var pelicula = await _context.Peliculas
+                    .Include(p => p.Funciones)
                     .FirstOrDefaultAsync(m => m.Id == id);
+
                 if (pelicula == null)
                 {
                     result = NotFound();
                 }
                 else
                 {
+                    ViewBag.FuncionesAsociadas = pelicula.Funciones.Count;
                     result = View(pelicula);
                 }
             }
@@ -171,20 +193,42 @@ namespace CineCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var pelicula = await _context.Peliculas.FindAsync(id);
+            IActionResult result;
 
-            if (pelicula != null)
+            var pelicula = await _context.Peliculas
+                .Include(p => p.Funciones)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (pelicula == null)
+            {
+                result = RedirectToAction(nameof(Index));
+            }
+            else if (pelicula.Funciones.Any())
+            {
+                TempData[TempKeys.Error] =
+                    $"No se puede eliminar \"{pelicula.Titulo}\" porque tiene {pelicula.Funciones.Count} función/es asociada/s. Eliminá las funciones primero.";
+                result = RedirectToAction(nameof(Index));
+            }
+            else
             {
                 _context.Peliculas.Remove(pelicula);
                 await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = $"Película \"{pelicula.Titulo}\" eliminada.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            return RedirectToAction(nameof(Index));
+            return result;
         }
 
         private bool PeliculaExists(int id)
         {
             return _context.Peliculas.Any(e => e.Id == id);
+        }
+
+        private static class TempKeys
+        {
+            public const string Exito = "Exito";
+            public const string Error = "Error";
         }
     }
 }

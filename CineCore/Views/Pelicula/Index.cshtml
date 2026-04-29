@@ -1,59 +1,83 @@
 ﻿@model IEnumerable<CineCore.Models.Pelicula>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Películas";
+    var conFuncionesFuturas = ViewBag.IdsConFuncionesFuturas as HashSet<int> ?? new HashSet<int>();
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Películas</h1>
+    @if (User.IsInRole(CineCore.Models.Roles.Empleado))
+    {
+        <a asp-action="Create" class="btn btn-primary">Nueva Película</a>
+    }
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Titulo)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Duracion)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Clasificacion)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Sinopsis)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ImagenUrl)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Titulo)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Duracion)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Clasificacion)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Sinopsis)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.ImagenUrl)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No hay películas cargadas.</div>
 }
-    </tbody>
-</table>
+else
+{
+    <div class="row">
+        @foreach (var pelicula in Model)
+        {
+            var tienePoster = !string.IsNullOrWhiteSpace(pelicula.ImagenUrl);
+            var enCartelera = conFuncionesFuturas.Contains(pelicula.Id);
+
+            <div class="col-sm-6 col-md-4 col-lg-3 mb-4">
+                <div class="card h-100 shadow-sm position-relative">
+                    @if (!enCartelera)
+                    {
+                        <span class="badge bg-warning text-dark position-absolute top-0 end-0 m-2"
+                              style="z-index: 3;">
+                            Próximamente
+                        </span>
+                    }
+                    <a asp-action="Details" asp-route-id="@pelicula.Id" class="text-decoration-none">
+                        @if (tienePoster)
+                        {
+                            <img src="@pelicula.ImagenUrl" alt="Poster de @pelicula.Titulo"
+                                 class="card-img-top" style="object-fit: cover; aspect-ratio: 2/3;" />
+                        }
+                        else
+                        {
+                            <div class="d-flex align-items-center justify-content-center bg-secondary-subtle card-img-top"
+                                 style="aspect-ratio: 2/3;">
+                                <span class="text-muted">Sin imagen</span>
+                            </div>
+                        }
+                    </a>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title mb-1">
+                            <a asp-action="Details" asp-route-id="@pelicula.Id"
+                                   class="text-reset text-decoration-none stretched-link">
+                                @pelicula.Titulo
+                            </a>
+                        </h5>
+                        <p class="card-subtitle text-body-secondary mb-2 small">
+                            @pelicula.Clasificacion · @Duracion.Format(pelicula.Duracion)
+                        </p>
+                        @if (pelicula.Generos.Any())
+                        {
+                            <p class="mb-0">
+                                @foreach (var genero in pelicula.Generos)
+                                {
+                                    <span class="badge bg-info text-dark me-1">@genero.Nombre</span>
+                                }
+                            </p>
+                        }
+
+                        @if (User.IsInRole(CineCore.Models.Roles.Empleado))
+                        {
+                            <div class="mt-3 position-relative" style="z-index: 2;">
+                                <a asp-action="Edit" asp-route-id="@pelicula.Id" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                <a asp-action="Delete" asp-route-id="@pelicula.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
