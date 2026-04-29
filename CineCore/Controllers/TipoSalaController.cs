@@ -2,12 +2,7 @@
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CineCore.Controllers
 {
@@ -21,139 +16,187 @@ namespace CineCore.Controllers
             _context = context;
         }
 
-        // GET: TipoSala
         public async Task<IActionResult> Index()
         {
-            return View(await _context.TiposSala.ToListAsync());
+            var tipos = await _context.TiposSala
+                .OrderBy(t => t.Nombre)
+                .ToListAsync();
+
+            return View(tipos);
         }
 
-        // GET: TipoSala/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var tipoSala = await _context.TiposSala
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (tipoSala == null)
+            else
             {
-                return NotFound();
+                var tipo = await _context.TiposSala.FirstOrDefaultAsync(m => m.Id == id);
+                result = tipo == null ? NotFound() : View(tipo);
             }
 
-            return View(tipoSala);
+            return result;
         }
 
-        // GET: TipoSala/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: TipoSala/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Nombre,PrecioExtra")] TipoSala tipoSala)
         {
-            if (ModelState.IsValid)
+            IActionResult result;
+
+            var nombreDuplicado = await _context.TiposSala.AnyAsync(t => t.Nombre == tipoSala.Nombre);
+            if (nombreDuplicado)
+            {
+                ModelState.AddModelError(nameof(TipoSala.Nombre), "Ya existe un tipo de sala con ese nombre.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                result = View(tipoSala);
+            }
+            else
             {
                 _context.Add(tipoSala);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                result = RedirectToAction(nameof(Index));
             }
-            return View(tipoSala);
+
+            return result;
         }
 
-        // GET: TipoSala/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
+            }
+            else
+            {
+                var tipo = await _context.TiposSala.FindAsync(id);
+                result = tipo == null ? NotFound() : View(tipo);
             }
 
-            var tipoSala = await _context.TiposSala.FindAsync(id);
-            if (tipoSala == null)
-            {
-                return NotFound();
-            }
-            return View(tipoSala);
+            return result;
         }
 
-        // POST: TipoSala/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Nombre,PrecioExtra")] TipoSala tipoSala)
         {
+            IActionResult result;
+
             if (id != tipoSala.Id)
             {
-                return NotFound();
+                result = NotFound();
+            }
+            else
+            {
+                var nombreDuplicado = await _context.TiposSala.AnyAsync(t => t.Nombre == tipoSala.Nombre && t.Id != id);
+                if (nombreDuplicado)
+                {
+                    ModelState.AddModelError(nameof(TipoSala.Nombre), "Ya existe un tipo de sala con ese nombre.");
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    result = View(tipoSala);
+                }
+                else
+                {
+                    try
+                    {
+                        _context.Update(tipoSala);
+                        await _context.SaveChangesAsync();
+                        result = RedirectToAction(nameof(Index));
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        if (_context.TiposSala.Any(e => e.Id == tipoSala.Id))
+                        {
+                            throw;
+                        }
+                        result = NotFound();
+                    }
+                }
             }
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(tipoSala);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!TipoSalaExists(tipoSala.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(tipoSala);
+            return result;
         }
 
-        // GET: TipoSala/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var tipoSala = await _context.TiposSala
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (tipoSala == null)
+            else
             {
-                return NotFound();
+                var tipo = await _context.TiposSala
+                    .Include(t => t.Salas)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (tipo == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    ViewBag.SalasAsociadas = tipo.Salas.Count;
+                    result = View(tipo);
+                }
             }
 
-            return View(tipoSala);
+            return result;
         }
 
-        // POST: TipoSala/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var tipoSala = await _context.TiposSala.FindAsync(id);
-            if (tipoSala != null)
+            IActionResult result;
+
+            var tipo = await _context.TiposSala
+                .Include(t => t.Salas)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (tipo == null)
             {
-                _context.TiposSala.Remove(tipoSala);
+                result = RedirectToAction(nameof(Index));
+            }
+            else if (tipo.Salas.Any())
+            {
+                TempData[TempKeys.Error] =
+                    $"No se puede eliminar el tipo \"{tipo.Nombre}\" porque tiene {tipo.Salas.Count} sala/s asociada/s.";
+                result = RedirectToAction(nameof(Index));
+            }
+            else
+            {
+                _context.TiposSala.Remove(tipo);
+                await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = $"Tipo de sala \"{tipo.Nombre}\" eliminado.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return result;
         }
 
-        private bool TipoSalaExists(int id)
+        private static class TempKeys
         {
-            return _context.TiposSala.Any(e => e.Id == id);
+            public const string Exito = "Exito";
+            public const string Error = "Error";
         }
     }
 }

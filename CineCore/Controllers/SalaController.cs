@@ -4,16 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CineCore.Controllers
 {
     [Authorize(Roles = Roles.Empleado)]
     public class SalaController : Controller
     {
+        private static readonly string[] EtiquetasFilas = { "A", "B", "C", "D", "E", "F" };
+
         private readonly ApplicationDbContext _context;
 
         public SalaController(ApplicationDbContext context)
@@ -21,172 +19,258 @@ namespace CineCore.Controllers
             _context = context;
         }
 
-        // GET: Sala
         public async Task<IActionResult> Index()
         {
-            var applicationDbContext = _context.Salas.Include(s => s.TipoSala);
-            return View(await applicationDbContext.ToListAsync());
+            var salas = await _context.Salas
+                .Include(s => s.TipoSala)
+                .OrderBy(s => s.Numero)
+                .ToListAsync();
+
+            return View(salas);
         }
 
-        // GET: Sala/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var sala = await _context.Salas
-                .Include(s => s.TipoSala)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (sala == null)
+            else
             {
-                return NotFound();
+                var sala = await _context.Salas
+                    .Include(s => s.TipoSala)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (sala == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    result = View(sala);
+                }
             }
 
-            return View(sala);
+            return result;
         }
 
-        // GET: Sala/Create
         public IActionResult Create()
         {
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre");
+            CargarSelectListTipos();
             return View();
         }
 
-        // POST: Sala/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Numero,Capacidad,TipoSalaId")] Sala sala)
         {
+            IActionResult result;
+
+            var numeroDuplicado = await _context.Salas.AnyAsync(s => s.Numero == sala.Numero);
+            if (numeroDuplicado)
+            {
+                ModelState.AddModelError(nameof(Sala.Numero), $"Ya existe una sala con el número {sala.Numero}.");
+            }
+
             if (!ModelState.IsValid)
             {
-                var errores = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
-                TempData["Error"] = string.Join(", ", errores);
-                ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", sala.TipoSalaId);
-                return View(sala);
+                CargarSelectListTipos(sala.TipoSalaId);
+                result = View(sala);
             }
-
-            _context.Add(sala);
-            await _context.SaveChangesAsync();
-
-            // Generar butacas automáticamente
-            string[] filas = { "A", "B", "C", "D", "E", "F" };
-            int butacasPorFila = sala.Capacidad / filas.Length;
-            int butacasGeneradas = 0;
-
-            foreach (var fila in filas)
+            else
             {
-                for (int i = 1; i <= butacasPorFila; i++)
-                {
-                    if (butacasGeneradas >= sala.Capacidad) break;
-                    _context.Butacas.Add(new Butaca
-                    {
-                        Fila = fila,
-                        Numero = i,
-                        SalaId = sala.Id
-                    });
-                    butacasGeneradas++;
-                }
-                if (butacasGeneradas >= sala.Capacidad) break;
+                _context.Add(sala);
+                await _context.SaveChangesAsync();
+
+                GenerarButacas(sala);
+                await _context.SaveChangesAsync();
+
+                TempData[TempKeys.Exito] = $"Sala {sala.Numero} creada con {sala.Capacidad} butacas.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return result;
         }
 
-        // GET: Sala/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
+            }
+            else
+            {
+                var sala = await _context.Salas.FindAsync(id);
+
+                if (sala == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    CargarSelectListTipos(sala.TipoSalaId);
+                    result = View(sala);
+                }
             }
 
-            var sala = await _context.Salas.FindAsync(id);
-            if (sala == null)
-            {
-                return NotFound();
-            }
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", sala.TipoSalaId);
-            return View(sala);
+            return result;
         }
 
-        // POST: Sala/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Numero,Capacidad,TipoSalaId")] Sala sala)
         {
+            IActionResult result;
+
             if (id != sala.Id)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            if (ModelState.IsValid)
+            else
             {
-                try
+                var original = await _context.Salas.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
+
+                if (original == null)
                 {
-                    _context.Update(sala);
-                    await _context.SaveChangesAsync();
+                    result = NotFound();
                 }
-                catch (DbUpdateConcurrencyException)
+                else
                 {
-                    if (!SalaExists(sala.Id))
+                    if (sala.Capacidad != original.Capacidad)
                     {
-                        return NotFound();
+                        ModelState.AddModelError(nameof(Sala.Capacidad),
+                            "No se puede modificar la capacidad de una sala existente porque las butacas ya fueron generadas.");
+                    }
+
+                    var numeroDuplicado = await _context.Salas.AnyAsync(s => s.Numero == sala.Numero && s.Id != id);
+                    if (numeroDuplicado)
+                    {
+                        ModelState.AddModelError(nameof(Sala.Numero), $"Ya existe una sala con el número {sala.Numero}.");
+                    }
+
+                    if (!ModelState.IsValid)
+                    {
+                        CargarSelectListTipos(sala.TipoSalaId);
+                        result = View(sala);
                     }
                     else
                     {
-                        throw;
+                        try
+                        {
+                            _context.Update(sala);
+                            await _context.SaveChangesAsync();
+                            TempData[TempKeys.Exito] = "Sala actualizada.";
+                            result = RedirectToAction(nameof(Index));
+                        }
+                        catch (DbUpdateConcurrencyException)
+                        {
+                            if (_context.Salas.Any(e => e.Id == sala.Id))
+                            {
+                                throw;
+                            }
+                            result = NotFound();
+                        }
                     }
                 }
-                return RedirectToAction(nameof(Index));
             }
-            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", sala.TipoSalaId);
-            return View(sala);
+
+            return result;
         }
 
-        // GET: Sala/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var sala = await _context.Salas
-                .Include(s => s.TipoSala)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (sala == null)
+            else
             {
-                return NotFound();
+                var sala = await _context.Salas
+                    .Include(s => s.TipoSala)
+                    .Include(s => s.Funciones)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (sala == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    ViewBag.FuncionesAsociadas = sala.Funciones.Count;
+                    result = View(sala);
+                }
             }
 
-            return View(sala);
+            return result;
         }
 
-        // POST: Sala/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var sala = await _context.Salas.FindAsync(id);
-            if (sala != null)
+            IActionResult result;
+
+            var sala = await _context.Salas
+                .Include(s => s.Funciones)
+                .Include(s => s.Butacas)
+                .FirstOrDefaultAsync(s => s.Id == id);
+
+            if (sala == null)
             {
+                result = RedirectToAction(nameof(Index));
+            }
+            else if (sala.Funciones.Any())
+            {
+                TempData[TempKeys.Error] =
+                    $"No se puede eliminar la sala {sala.Numero} porque tiene {sala.Funciones.Count} función/es asociada/s.";
+                result = RedirectToAction(nameof(Index));
+            }
+            else
+            {
+                _context.Butacas.RemoveRange(sala.Butacas);
                 _context.Salas.Remove(sala);
+                await _context.SaveChangesAsync();
+
+                TempData[TempKeys.Exito] = $"Sala {sala.Numero} eliminada.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return result;
         }
 
-        private bool SalaExists(int id)
+        private void GenerarButacas(Sala sala)
         {
-            return _context.Salas.Any(e => e.Id == id);
+            var butacasPorFila = sala.Capacidad / EtiquetasFilas.Length;
+
+            foreach (var fila in EtiquetasFilas)
+            {
+                for (var numero = 1; numero <= butacasPorFila; numero++)
+                {
+                    _context.Butacas.Add(new Butaca
+                    {
+                        Fila = fila,
+                        Numero = numero,
+                        SalaId = sala.Id
+                    });
+                }
+            }
+        }
+
+        private void CargarSelectListTipos(int? tipoSalaId = null)
+        {
+            ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", tipoSalaId);
+        }
+
+        private static class TempKeys
+        {
+            public const string Exito = "Exito";
+            public const string Error = "Error";
         }
     }
 }

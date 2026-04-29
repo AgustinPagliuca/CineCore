@@ -2,12 +2,7 @@
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CineCore.Controllers
 {
@@ -21,139 +16,187 @@ namespace CineCore.Controllers
             _context = context;
         }
 
-        // GET: Genero
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Generos.ToListAsync());
+            var generos = await _context.Generos
+                .OrderBy(g => g.Nombre)
+                .ToListAsync();
+
+            return View(generos);
         }
 
-        // GET: Genero/Details/5
         public async Task<IActionResult> Details(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var genero = await _context.Generos
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (genero == null)
+            else
             {
-                return NotFound();
+                var genero = await _context.Generos.FirstOrDefaultAsync(m => m.Id == id);
+                result = genero == null ? NotFound() : View(genero);
             }
 
-            return View(genero);
+            return result;
         }
 
-        // GET: Genero/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Genero/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,Nombre,Descripcion")] Genero genero)
         {
-            if (ModelState.IsValid)
+            IActionResult result;
+
+            var nombreDuplicado = await _context.Generos.AnyAsync(g => g.Nombre == genero.Nombre);
+            if (nombreDuplicado)
+            {
+                ModelState.AddModelError(nameof(Genero.Nombre), "Ya existe un género con ese nombre.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                result = View(genero);
+            }
+            else
             {
                 _context.Add(genero);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                result = RedirectToAction(nameof(Index));
             }
-            return View(genero);
+
+            return result;
         }
 
-        // GET: Genero/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
+            }
+            else
+            {
+                var genero = await _context.Generos.FindAsync(id);
+                result = genero == null ? NotFound() : View(genero);
             }
 
-            var genero = await _context.Generos.FindAsync(id);
-            if (genero == null)
-            {
-                return NotFound();
-            }
-            return View(genero);
+            return result;
         }
 
-        // POST: Genero/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, [Bind("Id,Nombre,Descripcion")] Genero genero)
         {
+            IActionResult result;
+
             if (id != genero.Id)
             {
-                return NotFound();
+                result = NotFound();
+            }
+            else
+            {
+                var nombreDuplicado = await _context.Generos.AnyAsync(g => g.Nombre == genero.Nombre && g.Id != id);
+                if (nombreDuplicado)
+                {
+                    ModelState.AddModelError(nameof(Genero.Nombre), "Ya existe un género con ese nombre.");
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    result = View(genero);
+                }
+                else
+                {
+                    try
+                    {
+                        _context.Update(genero);
+                        await _context.SaveChangesAsync();
+                        result = RedirectToAction(nameof(Index));
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        if (_context.Generos.Any(e => e.Id == genero.Id))
+                        {
+                            throw;
+                        }
+                        result = NotFound();
+                    }
+                }
             }
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(genero);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!GeneroExists(genero.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(genero);
+            return result;
         }
 
-        // GET: Genero/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            IActionResult result;
+
             if (id == null)
             {
-                return NotFound();
+                result = NotFound();
             }
-
-            var genero = await _context.Generos
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (genero == null)
+            else
             {
-                return NotFound();
+                var genero = await _context.Generos
+                    .Include(g => g.Peliculas)
+                    .FirstOrDefaultAsync(m => m.Id == id);
+
+                if (genero == null)
+                {
+                    result = NotFound();
+                }
+                else
+                {
+                    ViewBag.PeliculasAsociadas = genero.Peliculas.Count;
+                    result = View(genero);
+                }
             }
 
-            return View(genero);
+            return result;
         }
 
-        // POST: Genero/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var genero = await _context.Generos.FindAsync(id);
-            if (genero != null)
+            IActionResult result;
+
+            var genero = await _context.Generos
+                .Include(g => g.Peliculas)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (genero == null)
+            {
+                result = RedirectToAction(nameof(Index));
+            }
+            else if (genero.Peliculas.Any())
+            {
+                TempData[TempKeys.Error] =
+                    $"No se puede eliminar el género \"{genero.Nombre}\" porque tiene {genero.Peliculas.Count} película/s asociada/s.";
+                result = RedirectToAction(nameof(Index));
+            }
+            else
             {
                 _context.Generos.Remove(genero);
+                await _context.SaveChangesAsync();
+                TempData[TempKeys.Exito] = $"Género \"{genero.Nombre}\" eliminado.";
+                result = RedirectToAction(nameof(Index));
             }
 
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return result;
         }
 
-        private bool GeneroExists(int id)
+        private static class TempKeys
         {
-            return _context.Generos.Any(e => e.Id == id);
+            public const string Exito = "Exito";
+            public const string Error = "Error";
         }
     }
 }
