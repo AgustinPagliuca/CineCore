@@ -24,7 +24,6 @@ namespace CineCore.Controllers
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User);
-            var ahora = DateTime.Now;
 
             var reservas = await _context.Reservas
                 .Include(r => r.Funcion)
@@ -34,17 +33,13 @@ namespace CineCore.Controllers
                         .ThenInclude(s => s!.TipoSala)
                 .Include(r => r.Butaca)
                 .Where(r => r.ClienteId == userId)
-                .OrderByDescending(r => r.FechaReserva)
+                .OrderByDescending(r => r.Funcion!.FechaHora)
+                .ThenByDescending(r => r.FechaReserva)
                 .ToListAsync();
 
             var modelo = new MisReservasViewModel
             {
-                Proximas = reservas
-                    .Where(r => r.Funcion!.FechaHora >= ahora)
-                    .ToList(),
-                Anteriores = reservas
-                    .Where(r => r.Funcion!.FechaHora < ahora)
-                    .ToList()
+                Reservas = reservas
             };
 
             return View(modelo);

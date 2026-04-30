@@ -3,50 +3,181 @@
 @{
     ViewData["Title"] = "Mis Reservas";
 
-    int ContarGrupos(IReadOnlyList<CineCore.Models.Reserva> reservas) =>
-        reservas
-            .GroupBy(r => new { r.FuncionId, r.FechaReserva })
-            .Count();
+    string BadgeClase(CineCore.Models.EstadoReserva estado, bool funcionPaso) =>
+        funcionPaso
+            ? "bg-secondary"
+            : estado switch
+            {
+                CineCore.Models.EstadoReserva.Confirmada => "bg-success",
+                CineCore.Models.EstadoReserva.Pendiente => "bg-warning text-dark",
+                CineCore.Models.EstadoReserva.Cancelada => "bg-danger",
+                _ => "bg-secondary"
+            };
 
-    var cantidadProximas = ContarGrupos(Model.Proximas);
-    var cantidadAnteriores = ContarGrupos(Model.Anteriores);
+    string EtiquetaEstado(CineCore.Models.EstadoReserva estado, bool funcionPaso, bool todasCanceladas) =>
+        funcionPaso
+            ? (todasCanceladas ? "Cancelada" : "Caducada")
+            : todasCanceladas
+                ? "Cancelada"
+                : "Confirmada";
+
+    var grupos = Model.Reservas
+        .GroupBy(r => new { r.FuncionId, r.FechaReserva })
+        .Select(g => new
+        {
+            Reservas = g.OrderBy(r => r.Butaca!.Fila).ThenBy(r => r.Butaca!.Numero).ToList(),
+            Funcion = g.First().Funcion!,
+            FechaReserva = g.Key.FechaReserva
+        })
+        .OrderByDescending(g => g.Funcion.FechaHora)
+        .ThenByDescending(g => g.FechaReserva)
+        .ToList();
 }
 
-<h2>Mis Reservas</h2>
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+    <h2 class="mb-0">Mis Reservas</h2>
 
-<ul class="nav nav-tabs mb-3" id="reservasTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="tab-proximas" data-bs-toggle="tab"
-                data-bs-target="#panel-proximas" type="button" role="tab">
-            Próximas
-            <span class="badge bg-primary ms-1">@cantidadProximas</span>
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="tab-anteriores" data-bs-toggle="tab"
-                data-bs-target="#panel-anteriores" type="button" role="tab">
-            Anteriores
-            <span class="badge bg-secondary ms-1">@cantidadAnteriores</span>
-        </button>
-    </li>
-</ul>
+    @if (grupos.Any())
+    {
+        <div class="btn-group" role="group" aria-label="Filtro de reservas">
+            <input type="radio" class="btn-check" name="filtro" id="filtro-todas" value="todas" checked>
+            <label class="btn btn-outline-secondary btn-sm" for="filtro-todas">Todas</label>
 
-<div class="tab-content" id="reservasTabsContent">
-    <div class="tab-pane fade show active" id="panel-proximas" role="tabpanel">
-        <partial name="_TablaReservas" model="@(new CineCore.Models.ViewModels.TablaReservasContext
-                                               {
-                                                   Reservas = Model.Proximas,
-                                                   MensajeVacio = "No tenés reservas próximas. Mirá la cartelera para encontrar algo.",
-                                                   PermiteCancelar = true
-                                               })" />
-    </div>
+            <input type="radio" class="btn-check" name="filtro" id="filtro-proximas" value="proximas">
+            <label class="btn btn-outline-secondary btn-sm" for="filtro-proximas">Próximas</label>
 
-    <div class="tab-pane fade" id="panel-anteriores" role="tabpanel">
-        <partial name="_TablaReservas" model="@(new CineCore.Models.ViewModels.TablaReservasContext
-                                               {
-                                                   Reservas = Model.Anteriores,
-                                                   MensajeVacio = "Todavía no hay funciones pasadas en tu historial.",
-                                                   PermiteCancelar = false
-                                               })" />
-    </div>
+            <input type="radio" class="btn-check" name="filtro" id="filtro-pasadas" value="pasadas">
+            <label class="btn btn-outline-secondary btn-sm" for="filtro-pasadas">Pasadas</label>
+        </div>
+    }
 </div>
+
+@if (!grupos.Any())
+{
+    <div class="alert alert-info">
+        Todavía no tenés reservas. Mirá la
+        <a asp-controller="Funcion" asp-action="Index" class="alert-link">cartelera</a>
+        para encontrar algo que te guste.
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle" id="tablaReservas">
+            <thead>
+                <tr>
+                    <th>Película</th>
+                    <th>Fecha de la función</th>
+                    <th>Sala</th>
+                    <th>Butacas</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var grupo in grupos)
+                {
+                    var funcion = grupo.Funcion;
+                    var funcionPaso = funcion.YaPaso();
+                    var activas = grupo.Reservas
+                        .Where(r => r.Estado != CineCore.Models.EstadoReserva.Cancelada)
+                        .ToList();
+                    var todasCanceladas = !activas.Any();
+                    var totalActivas = activas.Sum(r => r.PrecioPagado);
+                    var totalOriginal = grupo.Reservas.Sum(r => r.PrecioPagado);
+                    var puedeCancelar = !funcionPaso && !todasCanceladas;
+                    var clasificacionFila = funcionPaso ? "pasada" : "proxima";
+
+                    <tr data-clasificacion="@clasificacionFila" class="@(funcionPaso ? "text-body-secondary" : "")">
+                        <td>@funcion.Pelicula!.Titulo</td>
+                        <td>@funcion.FechaHora.ToString("dd/MM/yyyy HH:mm")</td>
+                        <td>Sala @funcion.Sala!.Numero (@funcion.Sala.TipoSala!.Nombre)</td>
+                        <td>
+                            @string.Join(", ", grupo.Reservas.Select(r => $"{r.Butaca!.Fila}{r.Butaca.Numero}"))
+                            @if (grupo.Reservas.Count > 1)
+                            {
+                                <br />
+                                <small class="text-muted">@grupo.Reservas.Count butacas</small>
+                            }
+                        </td>
+                        <td>
+                            @if (todasCanceladas)
+                            {
+                                <span class="text-muted text-decoration-line-through">@Money.Format(totalOriginal)</span>
+                            }
+                            else
+                            {
+                                <strong>@Money.Format(totalActivas)</strong>
+                                @if (activas.Count != grupo.Reservas.Count)
+                                {
+                                    <br />
+                                    <small class="text-muted">
+                                        (@(grupo.Reservas.Count - activas.Count) cancelada@((grupo.Reservas.Count - activas.Count) == 1 ? "" : "s"))
+                                    </small>
+                                }
+                            }
+                        </td>
+                        <td>
+                            <span class="badge @BadgeClase(grupo.Reservas.First().Estado, funcionPaso)">
+                                @EtiquetaEstado(grupo.Reservas.First().Estado, funcionPaso, todasCanceladas)
+                            </span>
+                        </td>
+                        <td>
+                            @if (puedeCancelar)
+                            {
+                                <form asp-action="CancelarGrupo" method="post" class="d-inline"
+                                      onsubmit="return confirm('¿Cancelar @(activas.Count == 1 ? "esta reserva" : $"las {activas.Count} butacas de esta reserva")?');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="funcionId" value="@funcion.Id" />
+                                    <input type="hidden" name="fecha" value="@grupo.FechaReserva.ToString("o")" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        Cancelar@(activas.Count > 1 ? " todo" : "")
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <p class="text-muted small mt-2 mb-0" id="mensajeSinResultados" style="display: none;">
+        No hay reservas con el filtro seleccionado.
+    </p>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            const radios = document.querySelectorAll('input[name="filtro"]');
+            const filas = document.querySelectorAll('#tablaReservas tbody tr');
+            const mensajeVacio = document.getElementById('mensajeSinResultados');
+
+            if (!radios.length || !filas.length) return;
+
+            function aplicarFiltro(filtro) {
+                let visibles = 0;
+                filas.forEach(function (fila) {
+                    const clasificacion = fila.dataset.clasificacion;
+                    const visible = filtro === 'todas' ||
+                                    (filtro === 'proximas' && clasificacion === 'proxima') ||
+                                    (filtro === 'pasadas' && clasificacion === 'pasada');
+                    fila.style.display = visible ? '' : 'none';
+                    if (visible) visibles++;
+                });
+
+                if (mensajeVacio) {
+                    mensajeVacio.style.display = visibles === 0 ? 'block' : 'none';
+                }
+            }
+
+            radios.forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    if (this.checked) aplicarFiltro(this.value);
+                });
+            });
+        })();
+    </script>
+}
