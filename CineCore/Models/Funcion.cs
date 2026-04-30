@@ -1,11 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using CineCore.Helpers;
 
 namespace CineCore.Models
 {
     public class Funcion : IValidatableObject
     {
-        public static readonly TimeSpan MargenMinimoCreacion = TimeSpan.FromMinutes(30);
-
         public int Id { get; set; }
 
         [Display(Name = "Fecha y hora")]
@@ -41,10 +40,10 @@ namespace CineCore.Models
         {
             var errores = new List<ValidationResult>();
 
-            var minimo = DateTime.Now.Add(MargenMinimoCreacion);
+            var minimo = DateTime.Now.Add(ReglasNegocio.MargenMinimoCreacionFuncion);
             if (FechaHora < minimo)
             {
-                var minutos = (int)MargenMinimoCreacion.TotalMinutes;
+                var minutos = (int)ReglasNegocio.MargenMinimoCreacionFuncion.TotalMinutes;
                 errores.Add(new ValidationResult(
                     $"La función debe estar al menos {minutos} minutos en el futuro.",
                     new[] { nameof(FechaHora) }));

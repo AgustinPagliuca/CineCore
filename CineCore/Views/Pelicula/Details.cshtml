@@ -76,7 +76,7 @@ else
     <div class="row">
         @foreach (var funcion in funcionesFuturas)
         {
-            var agotada = funcion.LugaresDisponibles <= 0;
+            var agotada = funcion.EstaAgotada();
 
             <div class="col-md-6 col-lg-4 mb-3">
                 <div class="card h-100 @(agotada ? "opacity-75" : "")">

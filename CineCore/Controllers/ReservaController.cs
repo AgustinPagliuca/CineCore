@@ -1,4 +1,5 @@
 ﻿using CineCore.Data;
+using CineCore.Helpers;
 using CineCore.Models;
 using CineCore.Models.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -11,8 +12,6 @@ namespace CineCore.Controllers
     [Authorize(Roles = Roles.Cliente)]
     public class ReservaController : Controller
     {
-        public const int MaximoButacasPorReserva = 8;
-
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
 
@@ -68,9 +67,9 @@ namespace CineCore.Controllers
             {
                 result = NotFound();
             }
-            else if (funcion.FechaHora < DateTime.Now)
+            else if (funcion.YaPaso())
             {
-                TempData[TempKeys.Error] = "Esta función ya pasó. Elegí otra de la cartelera.";
+                TempData[TempKeys.Error] = Mensajes.Reserva.FuncionYaPaso;
                 result = RedirectToAction("Index", "Funcion");
             }
             else
@@ -86,7 +85,7 @@ namespace CineCore.Controllers
 
                 ViewBag.Funcion = funcion;
                 ViewBag.ButacasDisponibles = butacasDisponibles;
-                ViewBag.MaximoButacasPorReserva = MaximoButacasPorReserva;
+                ViewBag.MaximoButacasPorReserva = ReglasNegocio.MaximoButacasPorReserva;
                 result = View();
             }
 
@@ -101,7 +100,7 @@ namespace CineCore.Controllers
             IActionResult result;
 
             var cantidad = butacaIds?.Length ?? 0;
-            var cantidadInvalida = cantidad < 1 || cantidad > MaximoButacasPorReserva;
+            var cantidadInvalida = cantidad < 1 || cantidad > ReglasNegocio.MaximoButacasPorReserva;
 
             var funcion = await _context.Funciones
                 .Include(f => f.Sala)
@@ -112,14 +111,14 @@ namespace CineCore.Controllers
             {
                 result = NotFound();
             }
-            else if (funcion.FechaHora < DateTime.Now)
+            else if (funcion.YaPaso())
             {
-                TempData[TempKeys.Error] = "Esta función ya pasó. Elegí otra de la cartelera.";
+                TempData[TempKeys.Error] = Mensajes.Reserva.FuncionYaPaso;
                 result = RedirectToAction("Index", "Funcion");
             }
             else if (cantidadInvalida)
             {
-                TempData[TempKeys.Error] = $"Tenés que seleccionar entre 1 y {MaximoButacasPorReserva} butacas.";
+                TempData[TempKeys.Error] = Mensajes.Reserva.CantidadInvalida(ReglasNegocio.MaximoButacasPorReserva);
                 result = RedirectToAction(nameof(Crear), new { funcionId });
             }
             else
@@ -145,12 +144,12 @@ namespace CineCore.Controllers
 
             if (butacasPertenecenALaSala != butacaIds.Length)
             {
-                TempData[TempKeys.Error] = "Alguna de las butacas seleccionadas no pertenece a esta sala.";
+                TempData[TempKeys.Error] = Mensajes.Reserva.ButacaNoPertenece;
                 result = RedirectToAction(nameof(Crear), new { funcionId = funcion.Id });
             }
             else if (hayAlgunaOcupada)
             {
-                TempData[TempKeys.Error] = "Alguna de las butacas ya fue reservada por otro cliente. Elegí nuevamente.";
+                TempData[TempKeys.Error] = Mensajes.Reserva.ButacaTomadaPorOtro;
                 result = RedirectToAction(nameof(Crear), new { funcionId = funcion.Id });
             }
             else
@@ -179,14 +178,14 @@ namespace CineCore.Controllers
                     await transaccion.CommitAsync();
 
                     TempData[TempKeys.Exito] = butacaIds.Length == 1
-                        ? "Reserva realizada con éxito."
-                        : $"Se reservaron {butacaIds.Length} butacas con éxito.";
+                        ? Mensajes.Reserva.Exito
+                        : Mensajes.Reserva.ExitoMultiple(butacaIds.Length);
                     result = RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateException)
                 {
                     await transaccion.RollbackAsync();
-                    TempData[TempKeys.Error] = "No se pudo completar la reserva. Intentá nuevamente.";
+                    TempData[TempKeys.Error] = Mensajes.Reserva.ErrorAlCrear;
                     result = RedirectToAction(nameof(Crear), new { funcionId = funcion.Id });
                 }
             }
@@ -210,7 +209,7 @@ namespace CineCore.Controllers
                 .ToListAsync();
 
             var primera = reservasDelGrupo.FirstOrDefault();
-            var funcionYaPaso = primera?.Funcion?.FechaHora < DateTime.Now;
+            var funcionYaPaso = primera?.Funcion?.YaPaso() ?? false;
 
             if (!reservasDelGrupo.Any())
             {
@@ -218,7 +217,7 @@ namespace CineCore.Controllers
             }
             else if (funcionYaPaso)
             {
-                TempData[TempKeys.Error] = "No se pueden cancelar reservas de funciones que ya pasaron.";
+                TempData[TempKeys.Error] = Mensajes.Reserva.PasadaNoCancelable;
                 result = RedirectToAction(nameof(Index));
             }
             else
@@ -230,18 +229,12 @@ namespace CineCore.Controllers
                 await _context.SaveChangesAsync();
 
                 TempData[TempKeys.Exito] = reservasDelGrupo.Count == 1
-                    ? "Reserva cancelada."
-                    : $"Se cancelaron {reservasDelGrupo.Count} butacas.";
+                    ? Mensajes.Reserva.Cancelada
+                    : Mensajes.Reserva.CanceladasMultiples(reservasDelGrupo.Count);
                 result = RedirectToAction(nameof(Index));
             }
 
             return result;
-        }
-
-        private static class TempKeys
-        {
-            public const string Exito = "Exito";
-            public const string Error = "Error";
         }
     }
 }

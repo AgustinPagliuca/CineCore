@@ -1,4 +1,5 @@
 ﻿using CineCore.Data;
+using CineCore.Helpers;
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,6 @@ namespace CineCore.Controllers
             var generos = await _context.Generos
                 .OrderBy(g => g.Nombre)
                 .ToListAsync();
-
             return View(generos);
         }
 
@@ -56,7 +56,7 @@ namespace CineCore.Controllers
             var nombreDuplicado = await _context.Generos.AnyAsync(g => g.Nombre == genero.Nombre);
             if (nombreDuplicado)
             {
-                ModelState.AddModelError(nameof(Genero.Nombre), "Ya existe un género con ese nombre.");
+                ModelState.AddModelError(nameof(Genero.Nombre), Mensajes.Genero.NombreDuplicado);
             }
 
             if (!ModelState.IsValid)
@@ -105,7 +105,7 @@ namespace CineCore.Controllers
                 var nombreDuplicado = await _context.Generos.AnyAsync(g => g.Nombre == genero.Nombre && g.Id != id);
                 if (nombreDuplicado)
                 {
-                    ModelState.AddModelError(nameof(Genero.Nombre), "Ya existe un género con ese nombre.");
+                    ModelState.AddModelError(nameof(Genero.Nombre), Mensajes.Genero.NombreDuplicado);
                 }
 
                 if (!ModelState.IsValid)
@@ -178,25 +178,18 @@ namespace CineCore.Controllers
             }
             else if (genero.Peliculas.Any())
             {
-                TempData[TempKeys.Error] =
-                    $"No se puede eliminar el género \"{genero.Nombre}\" porque tiene {genero.Peliculas.Count} película/s asociada/s.";
+                TempData[TempKeys.Error] = Mensajes.Genero.ConPeliculasNoEliminable(genero.Nombre, genero.Peliculas.Count);
                 result = RedirectToAction(nameof(Index));
             }
             else
             {
                 _context.Generos.Remove(genero);
                 await _context.SaveChangesAsync();
-                TempData[TempKeys.Exito] = $"Género \"{genero.Nombre}\" eliminado.";
+                TempData[TempKeys.Exito] = Mensajes.Genero.Eliminado(genero.Nombre);
                 result = RedirectToAction(nameof(Index));
             }
 
             return result;
-        }
-
-        private static class TempKeys
-        {
-            public const string Exito = "Exito";
-            public const string Error = "Error";
         }
     }
 }

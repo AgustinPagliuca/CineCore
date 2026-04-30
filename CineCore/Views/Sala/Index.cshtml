@@ -1,47 +1,43 @@
 ﻿@model IEnumerable<CineCore.Models.Sala>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Salas";
 }
 
-<h1>Index</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Salas</h1>
+    <a asp-action="Create" class="btn btn-primary">Nueva Sala</a>
+</div>
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Numero)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Capacidad)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.TipoSala)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Numero)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Capacidad)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.TipoSala.Id)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No hay salas cargadas.</div>
 }
-    </tbody>
-</table>
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Capacidad</th>
+                <th>Tipo</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var sala in Model)
+            {
+                <tr>
+                    <td>@sala.Numero</td>
+                    <td>@sala.Capacidad butacas</td>
+                    <td>@(sala.TipoSala?.Nombre ?? "-")</td>
+                    <td>
+                        <a asp-action="Edit" asp-route-id="@sala.Id" class="btn btn-sm btn-outline-secondary">Editar</a>
+                        <a asp-action="Details" asp-route-id="@sala.Id" class="btn btn-sm btn-outline-info">Detalle</a>
+                        <a asp-action="Delete" asp-route-id="@sala.Id" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

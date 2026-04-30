@@ -33,11 +33,6 @@
     </div>
 </div>
 
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
-
 @if (!butacasDisponibles!.Any())
 {
     <div class="alert alert-warning">No hay butacas disponibles para esta función.</div>

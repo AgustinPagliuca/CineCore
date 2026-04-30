@@ -26,9 +26,9 @@
                         </li>
 
                         @using Microsoft.AspNetCore.Identity
-                    @inject SignInManager<CineCore.Models.ApplicationUser> SignInManager
+                        @inject SignInManager<CineCore.Models.ApplicationUser> SignInManager
 
-<li class="nav-item">
+                        <li class="nav-item">
                             <a class="nav-link text-white" asp-controller="Pelicula" asp-action="Index">Películas</a>
                         </li>
                         <li class="nav-item">
@@ -63,17 +63,17 @@
         </nav>
     </header>
     <div class="container">
-        @if (TempData["Exito"] != null)
+        @if (TempData[TempKeys.Exito] != null)
         {
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                @TempData["Exito"]
+                @TempData[TempKeys.Exito]
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         }
-        @if (TempData["Error"] != null)
+        @if (TempData[TempKeys.Error] != null)
         {
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                @TempData["Error"]
+                @TempData[TempKeys.Error]
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
             </div>
         }

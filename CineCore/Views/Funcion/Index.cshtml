@@ -2,7 +2,6 @@
 
 @{
     ViewData["Title"] = "Cartelera";
-    var ahora = DateTime.Now;
     var esEmpleado = User.IsInRole(CineCore.Models.Roles.Empleado);
 }
 
@@ -44,8 +43,8 @@ else
         <tbody>
             @foreach (var item in Model)
             {
-                var pasada = item.FechaHora < ahora;
-                var agotada = !pasada && item.LugaresDisponibles <= 0;
+                var pasada = item.YaPaso();
+                var agotada = !pasada && item.EstaAgotada();
                 var filaClase = pasada ? "text-body-secondary opacity-75" : "";
 
                 <tr class="@filaClase">

@@ -1,4 +1,5 @@
 ﻿using CineCore.Data;
+using CineCore.Helpers;
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,6 @@ namespace CineCore.Controllers
             var tipos = await _context.TiposSala
                 .OrderBy(t => t.Nombre)
                 .ToListAsync();
-
             return View(tipos);
         }
 
@@ -56,7 +56,7 @@ namespace CineCore.Controllers
             var nombreDuplicado = await _context.TiposSala.AnyAsync(t => t.Nombre == tipoSala.Nombre);
             if (nombreDuplicado)
             {
-                ModelState.AddModelError(nameof(TipoSala.Nombre), "Ya existe un tipo de sala con ese nombre.");
+                ModelState.AddModelError(nameof(TipoSala.Nombre), Mensajes.TipoSala.NombreDuplicado);
             }
 
             if (!ModelState.IsValid)
@@ -105,7 +105,7 @@ namespace CineCore.Controllers
                 var nombreDuplicado = await _context.TiposSala.AnyAsync(t => t.Nombre == tipoSala.Nombre && t.Id != id);
                 if (nombreDuplicado)
                 {
-                    ModelState.AddModelError(nameof(TipoSala.Nombre), "Ya existe un tipo de sala con ese nombre.");
+                    ModelState.AddModelError(nameof(TipoSala.Nombre), Mensajes.TipoSala.NombreDuplicado);
                 }
 
                 if (!ModelState.IsValid)
@@ -178,25 +178,18 @@ namespace CineCore.Controllers
             }
             else if (tipo.Salas.Any())
             {
-                TempData[TempKeys.Error] =
-                    $"No se puede eliminar el tipo \"{tipo.Nombre}\" porque tiene {tipo.Salas.Count} sala/s asociada/s.";
+                TempData[TempKeys.Error] = Mensajes.TipoSala.ConSalasNoEliminable(tipo.Nombre, tipo.Salas.Count);
                 result = RedirectToAction(nameof(Index));
             }
             else
             {
                 _context.TiposSala.Remove(tipo);
                 await _context.SaveChangesAsync();
-                TempData[TempKeys.Exito] = $"Tipo de sala \"{tipo.Nombre}\" eliminado.";
+                TempData[TempKeys.Exito] = Mensajes.TipoSala.Eliminado(tipo.Nombre);
                 result = RedirectToAction(nameof(Index));
             }
 
             return result;
-        }
-
-        private static class TempKeys
-        {
-            public const string Exito = "Exito";
-            public const string Error = "Error";
         }
     }
 }

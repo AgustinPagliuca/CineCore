@@ -2,32 +2,31 @@
 
 @{
     ViewData["Title"] = "Mis Reservas";
+
+    int ContarGrupos(IReadOnlyList<CineCore.Models.Reserva> reservas) =>
+        reservas
+            .GroupBy(r => new { r.FuncionId, r.FechaReserva })
+            .Count();
+
+    var cantidadProximas = ContarGrupos(Model.Proximas);
+    var cantidadAnteriores = ContarGrupos(Model.Anteriores);
 }
 
 <h2>Mis Reservas</h2>
-
-@if (TempData["Exito"] != null)
-{
-    <div class="alert alert-success">@TempData["Exito"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
 
 <ul class="nav nav-tabs mb-3" id="reservasTabs" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="tab-proximas" data-bs-toggle="tab"
                 data-bs-target="#panel-proximas" type="button" role="tab">
             Próximas
-            <span class="badge bg-primary ms-1">@Model.Proximas.Count</span>
+            <span class="badge bg-primary ms-1">@cantidadProximas</span>
         </button>
     </li>
     <li class="nav-item" role="presentation">
         <button class="nav-link" id="tab-anteriores" data-bs-toggle="tab"
                 data-bs-target="#panel-anteriores" type="button" role="tab">
             Anteriores
-            <span class="badge bg-secondary ms-1">@Model.Anteriores.Count</span>
+            <span class="badge bg-secondary ms-1">@cantidadAnteriores</span>
         </button>
     </li>
 </ul>

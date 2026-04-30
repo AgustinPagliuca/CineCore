@@ -1,4 +1,5 @@
 ﻿using CineCore.Data;
+using CineCore.Helpers;
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,8 +10,6 @@ namespace CineCore.Controllers
 {
     public class FuncionController : Controller
     {
-        public static readonly TimeSpan PausaEntreFunciones = TimeSpan.FromMinutes(15);
-
         private readonly ApplicationDbContext _context;
 
         public FuncionController(ApplicationDbContext context)
@@ -57,14 +56,7 @@ namespace CineCore.Controllers
                         .ThenInclude(s => s!.TipoSala)
                     .FirstOrDefaultAsync(m => m.Id == id);
 
-                if (funcion == null)
-                {
-                    result = NotFound();
-                }
-                else
-                {
-                    result = View(funcion);
-                }
+                result = funcion == null ? NotFound() : View(funcion);
             }
 
             return result;
@@ -95,7 +87,7 @@ namespace CineCore.Controllers
             {
                 _context.Add(funcion);
                 await _context.SaveChangesAsync();
-                TempData[TempKeys.Exito] = "Función creada con éxito.";
+                TempData[TempKeys.Exito] = Mensajes.Funcion.Creada;
                 result = RedirectToAction(nameof(Index));
             }
 
@@ -119,9 +111,9 @@ namespace CineCore.Controllers
                 {
                     result = NotFound();
                 }
-                else if (funcion.FechaHora < DateTime.Now)
+                else if (funcion.YaPaso())
                 {
-                    TempData[TempKeys.Error] = "No se pueden editar funciones que ya pasaron.";
+                    TempData[TempKeys.Error] = Mensajes.Funcion.PasadaNoEditable;
                     result = RedirectToAction(nameof(Index));
                 }
                 else
@@ -153,9 +145,9 @@ namespace CineCore.Controllers
                 {
                     result = NotFound();
                 }
-                else if (original.FechaHora < DateTime.Now)
+                else if (original.YaPaso())
                 {
-                    TempData[TempKeys.Error] = "No se pueden editar funciones que ya pasaron.";
+                    TempData[TempKeys.Error] = Mensajes.Funcion.PasadaNoEditable;
                     result = RedirectToAction(nameof(Index));
                 }
                 else
@@ -173,7 +165,7 @@ namespace CineCore.Controllers
                         {
                             _context.Update(funcion);
                             await _context.SaveChangesAsync();
-                            TempData[TempKeys.Exito] = "Función actualizada.";
+                            TempData[TempKeys.Exito] = Mensajes.Funcion.Actualizada;
                             result = RedirectToAction(nameof(Index));
                         }
                         catch (DbUpdateConcurrencyException)
@@ -212,9 +204,9 @@ namespace CineCore.Controllers
                 {
                     result = NotFound();
                 }
-                else if (funcion.FechaHora < DateTime.Now)
+                else if (funcion.YaPaso())
                 {
-                    TempData[TempKeys.Error] = "No se pueden eliminar funciones que ya pasaron.";
+                    TempData[TempKeys.Error] = Mensajes.Funcion.PasadaNoEliminable;
                     result = RedirectToAction(nameof(Index));
                 }
                 else
@@ -241,21 +233,21 @@ namespace CineCore.Controllers
             {
                 result = RedirectToAction(nameof(Index));
             }
-            else if (funcion.FechaHora < DateTime.Now)
+            else if (funcion.YaPaso())
             {
-                TempData[TempKeys.Error] = "No se pueden eliminar funciones que ya pasaron.";
+                TempData[TempKeys.Error] = Mensajes.Funcion.PasadaNoEliminable;
                 result = RedirectToAction(nameof(Index));
             }
             else if (funcion.Reservas.Any(r => r.Estado != EstadoReserva.Cancelada))
             {
-                TempData[TempKeys.Error] = "No se puede eliminar una función con reservas activas.";
+                TempData[TempKeys.Error] = Mensajes.Funcion.ConReservasNoEliminable;
                 result = RedirectToAction(nameof(Index));
             }
             else
             {
                 _context.Funciones.Remove(funcion);
                 await _context.SaveChangesAsync();
-                TempData[TempKeys.Exito] = "Función eliminada.";
+                TempData[TempKeys.Exito] = Mensajes.Funcion.Eliminada;
                 result = RedirectToAction(nameof(Index));
             }
 
@@ -270,7 +262,9 @@ namespace CineCore.Controllers
             if (pelicula != null)
             {
                 var inicioNueva = funcion.FechaHora;
-                var finNueva = inicioNueva.AddMinutes(pelicula.Duracion).Add(PausaEntreFunciones);
+                var finNueva = inicioNueva
+                    .AddMinutes(pelicula.Duracion)
+                    .Add(ReglasNegocio.PausaEntreFunciones);
 
                 var funcionesEnLaSala = await _context.Funciones
                     .Include(f => f.Pelicula)
@@ -283,16 +277,16 @@ namespace CineCore.Controllers
                     var inicioExistente = existente.FechaHora;
                     var finExistente = inicioExistente
                         .AddMinutes(existente.Pelicula?.Duracion ?? 0)
-                        .Add(PausaEntreFunciones);
+                        .Add(ReglasNegocio.PausaEntreFunciones);
 
                     var seSolapan = inicioNueva < finExistente && inicioExistente < finNueva;
 
                     if (seSolapan)
                     {
+                        var titulo = existente.Pelicula?.Titulo ?? "(sin título)";
                         ModelState.AddModelError(
                             nameof(Funcion.FechaHora),
-                            $"La función se solapa con \"{existente.Pelicula?.Titulo}\" del " +
-                            $"{inicioExistente:dd/MM/yyyy HH:mm} en la misma sala.");
+                            Mensajes.Funcion.Solapada(titulo, inicioExistente));
                     }
                 }
             }
@@ -300,14 +294,10 @@ namespace CineCore.Controllers
 
         private void CargarSelectLists(int? peliculaId = null, int? salaId = null)
         {
-            ViewData["PeliculaId"] = new SelectList(_context.Peliculas.OrderBy(p => p.Titulo), "Id", "Titulo", peliculaId);
-            ViewData["SalaId"] = new SelectList(_context.Salas.OrderBy(s => s.Numero), "Id", "Numero", salaId);
-        }
-
-        private static class TempKeys
-        {
-            public const string Exito = "Exito";
-            public const string Error = "Error";
+            ViewData["PeliculaId"] = new SelectList(
+                _context.Peliculas.OrderBy(p => p.Titulo), "Id", "Titulo", peliculaId);
+            ViewData["SalaId"] = new SelectList(
+                _context.Salas.OrderBy(s => s.Numero), "Id", "Numero", salaId);
         }
     }
 }

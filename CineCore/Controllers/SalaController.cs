@@ -1,4 +1,5 @@
 ﻿using CineCore.Data;
+using CineCore.Helpers;
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,8 +11,6 @@ namespace CineCore.Controllers
     [Authorize(Roles = Roles.Empleado)]
     public class SalaController : Controller
     {
-        private static readonly string[] EtiquetasFilas = { "A", "B", "C", "D", "E", "F" };
-
         private readonly ApplicationDbContext _context;
 
         public SalaController(ApplicationDbContext context)
@@ -42,15 +41,7 @@ namespace CineCore.Controllers
                 var sala = await _context.Salas
                     .Include(s => s.TipoSala)
                     .FirstOrDefaultAsync(m => m.Id == id);
-
-                if (sala == null)
-                {
-                    result = NotFound();
-                }
-                else
-                {
-                    result = View(sala);
-                }
+                result = sala == null ? NotFound() : View(sala);
             }
 
             return result;
@@ -71,7 +62,7 @@ namespace CineCore.Controllers
             var numeroDuplicado = await _context.Salas.AnyAsync(s => s.Numero == sala.Numero);
             if (numeroDuplicado)
             {
-                ModelState.AddModelError(nameof(Sala.Numero), $"Ya existe una sala con el número {sala.Numero}.");
+                ModelState.AddModelError(nameof(Sala.Numero), Mensajes.Sala.NumeroDuplicado(sala.Numero));
             }
 
             if (!ModelState.IsValid)
@@ -87,7 +78,7 @@ namespace CineCore.Controllers
                 GenerarButacas(sala);
                 await _context.SaveChangesAsync();
 
-                TempData[TempKeys.Exito] = $"Sala {sala.Numero} creada con {sala.Capacidad} butacas.";
+                TempData[TempKeys.Exito] = Mensajes.Sala.Creada(sala.Numero, sala.Capacidad);
                 result = RedirectToAction(nameof(Index));
             }
 
@@ -142,14 +133,13 @@ namespace CineCore.Controllers
                 {
                     if (sala.Capacidad != original.Capacidad)
                     {
-                        ModelState.AddModelError(nameof(Sala.Capacidad),
-                            "No se puede modificar la capacidad de una sala existente porque las butacas ya fueron generadas.");
+                        ModelState.AddModelError(nameof(Sala.Capacidad), Mensajes.Sala.CapacidadInmutable);
                     }
 
                     var numeroDuplicado = await _context.Salas.AnyAsync(s => s.Numero == sala.Numero && s.Id != id);
                     if (numeroDuplicado)
                     {
-                        ModelState.AddModelError(nameof(Sala.Numero), $"Ya existe una sala con el número {sala.Numero}.");
+                        ModelState.AddModelError(nameof(Sala.Numero), Mensajes.Sala.NumeroDuplicado(sala.Numero));
                     }
 
                     if (!ModelState.IsValid)
@@ -163,7 +153,7 @@ namespace CineCore.Controllers
                         {
                             _context.Update(sala);
                             await _context.SaveChangesAsync();
-                            TempData[TempKeys.Exito] = "Sala actualizada.";
+                            TempData[TempKeys.Exito] = Mensajes.Sala.Actualizada;
                             result = RedirectToAction(nameof(Index));
                         }
                         catch (DbUpdateConcurrencyException)
@@ -227,8 +217,7 @@ namespace CineCore.Controllers
             }
             else if (sala.Funciones.Any())
             {
-                TempData[TempKeys.Error] =
-                    $"No se puede eliminar la sala {sala.Numero} porque tiene {sala.Funciones.Count} función/es asociada/s.";
+                TempData[TempKeys.Error] = Mensajes.Sala.ConFuncionesNoEliminable(sala.Numero, sala.Funciones.Count);
                 result = RedirectToAction(nameof(Index));
             }
             else
@@ -237,7 +226,7 @@ namespace CineCore.Controllers
                 _context.Salas.Remove(sala);
                 await _context.SaveChangesAsync();
 
-                TempData[TempKeys.Exito] = $"Sala {sala.Numero} eliminada.";
+                TempData[TempKeys.Exito] = Mensajes.Sala.Eliminada(sala.Numero);
                 result = RedirectToAction(nameof(Index));
             }
 
@@ -246,9 +235,9 @@ namespace CineCore.Controllers
 
         private void GenerarButacas(Sala sala)
         {
-            var butacasPorFila = sala.Capacidad / EtiquetasFilas.Length;
+            var butacasPorFila = sala.Capacidad / ReglasNegocio.EtiquetasFilas.Length;
 
-            foreach (var fila in EtiquetasFilas)
+            foreach (var fila in ReglasNegocio.EtiquetasFilas)
             {
                 for (var numero = 1; numero <= butacasPorFila; numero++)
                 {
@@ -265,12 +254,6 @@ namespace CineCore.Controllers
         private void CargarSelectListTipos(int? tipoSalaId = null)
         {
             ViewData["TipoSalaId"] = new SelectList(_context.TiposSala, "Id", "Nombre", tipoSalaId);
-        }
-
-        private static class TempKeys
-        {
-            public const string Exito = "Exito";
-            public const string Error = "Error";
         }
     }
 }

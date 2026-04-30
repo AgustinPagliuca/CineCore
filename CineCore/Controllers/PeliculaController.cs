@@ -1,4 +1,5 @@
 ﻿using CineCore.Data;
+using CineCore.Helpers;
 using CineCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -61,7 +62,6 @@ namespace CineCore.Controllers
                     pelicula.Funciones = pelicula.Funciones
                         .OrderBy(f => f.FechaHora)
                         .ToList();
-
                     result = View(pelicula);
                 }
             }
@@ -86,7 +86,7 @@ namespace CineCore.Controllers
             {
                 _context.Add(pelicula);
                 await _context.SaveChangesAsync();
-                TempData[TempKeys.Exito] = $"Película \"{pelicula.Titulo}\" creada.";
+                TempData[TempKeys.Exito] = Mensajes.Pelicula.Creada(pelicula.Titulo);
                 result = RedirectToAction(nameof(Index));
             }
             else
@@ -109,14 +109,7 @@ namespace CineCore.Controllers
             else
             {
                 var pelicula = await _context.Peliculas.FindAsync(id);
-                if (pelicula == null)
-                {
-                    result = NotFound();
-                }
-                else
-                {
-                    result = View(pelicula);
-                }
+                result = pelicula == null ? NotFound() : View(pelicula);
             }
 
             return result;
@@ -143,7 +136,7 @@ namespace CineCore.Controllers
                 {
                     _context.Update(pelicula);
                     await _context.SaveChangesAsync();
-                    TempData[TempKeys.Exito] = "Película actualizada.";
+                    TempData[TempKeys.Exito] = Mensajes.Pelicula.Actualizada;
                     result = RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
@@ -205,15 +198,15 @@ namespace CineCore.Controllers
             }
             else if (pelicula.Funciones.Any())
             {
-                TempData[TempKeys.Error] =
-                    $"No se puede eliminar \"{pelicula.Titulo}\" porque tiene {pelicula.Funciones.Count} función/es asociada/s. Eliminá las funciones primero.";
+                TempData[TempKeys.Error] = Mensajes.Pelicula.ConFuncionesNoEliminable(
+                    pelicula.Titulo, pelicula.Funciones.Count);
                 result = RedirectToAction(nameof(Index));
             }
             else
             {
                 _context.Peliculas.Remove(pelicula);
                 await _context.SaveChangesAsync();
-                TempData[TempKeys.Exito] = $"Película \"{pelicula.Titulo}\" eliminada.";
+                TempData[TempKeys.Exito] = Mensajes.Pelicula.Eliminada(pelicula.Titulo);
                 result = RedirectToAction(nameof(Index));
             }
 
@@ -223,12 +216,6 @@ namespace CineCore.Controllers
         private bool PeliculaExists(int id)
         {
             return _context.Peliculas.Any(e => e.Id == id);
-        }
-
-        private static class TempKeys
-        {
-            public const string Exito = "Exito";
-            public const string Error = "Error";
         }
     }
 }
