@@ -1,0 +1,19 @@
+﻿@{
+    Layout = "/Views/Shared/_Layout.cshtml";
+}
+
+<h1>Mi cuenta</h1>
+<p class="text-muted">Configurá tu perfil, cambiá tu contraseña o gestioná tus datos.</p>
+
+<div class="row mt-4">
+    <div class="col-md-3">
+        <partial name="_ManageNav" />
+    </div>
+    <div class="col-md-9">
+        @RenderBody()
+    </div>
+</div>
+
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

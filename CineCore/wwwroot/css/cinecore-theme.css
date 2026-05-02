@@ -1,0 +1,786 @@
+﻿/* ============================================================
+   CineCore — Tema Vintage Clásico
+   Paleta: negro plomo · dorado vintage · crema
+   ============================================================ */
+
+:root {
+    /* Fondos */
+    --cc-bg-base: #0f0a07;
+    --cc-bg-elevado: #1a1410;
+    --cc-bg-mas-elevado: #2d2418;
+    --cc-borde: #3a2e20;
+    --cc-borde-suave: #2a2218;
+    /* Acentos */
+    --cc-dorado: #d4af37;
+    --cc-dorado-claro: #e8c860;
+    --cc-dorado-oscuro: #a88829;
+    --cc-dorado-tenue: rgba(212, 175, 55, 0.15);
+    /* Texto */
+    --cc-crema: #f4ead5;
+    --cc-crema-suave: #d8c8a8;
+    --cc-gris-calido: #8a7a5a;
+    /* Estados (paleta vintage, no Bootstrap default) */
+    --cc-exito: #7a9b3a;
+    --cc-exito-bg: rgba(122, 155, 58, 0.18);
+    --cc-error: #b8463a;
+    --cc-error-bg: rgba(184, 70, 58, 0.18);
+    --cc-info: #5d8b9e;
+    --cc-info-bg: rgba(93, 139, 158, 0.18);
+    --cc-warning: #d4af37;
+    --cc-warning-bg: rgba(212, 175, 55, 0.18);
+    /* Tipografía */
+    --cc-fuente-titulo: 'Bebas Neue', 'Oswald', system-ui, sans-serif;
+    --cc-fuente-cuerpo: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    /* Sombras */
+    --cc-sombra-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --cc-sombra-elevada: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+body {
+    background: var(--cc-bg-base);
+    color: var(--cc-crema);
+    font-family: var(--cc-fuente-cuerpo);
+}
+
+main {
+    min-height: calc(100vh - 200px);
+}
+
+/* Títulos */
+h1, h2, h3, h4, h5, h6 {
+    color: var(--cc-crema);
+    font-family: var(--cc-fuente-titulo);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+h1 {
+    font-size: 2.4rem;
+    font-weight: 400;
+}
+
+h2 {
+    font-size: 2rem;
+    font-weight: 400;
+}
+
+h3 {
+    font-size: 1.6rem;
+    font-weight: 400;
+}
+
+/* Texto utilitario */
+.text-muted, .text-body-secondary {
+    color: var(--cc-crema-suave) !important;
+}
+
+a {
+    color: var(--cc-dorado);
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+    a:hover {
+        color: var(--cc-dorado-claro);
+    }
+
+hr {
+    border-color: var(--cc-borde);
+    opacity: 0.6;
+}
+
+/* ============================================================
+   Navbar
+   ============================================================ */
+
+.navbar {
+    background: var(--cc-bg-elevado) !important;
+    border-bottom: 1px solid var(--cc-borde);
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-brand {
+    color: var(--cc-dorado) !important;
+    font-family: var(--cc-fuente-titulo);
+    font-size: 1.6rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+}
+
+.navbar-nav .nav-link {
+    color: var(--cc-crema) !important;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 1rem !important;
+    transition: color 0.15s ease;
+}
+
+    .navbar-nav .nav-link:hover,
+    .navbar-nav .nav-link:focus {
+        color: var(--cc-dorado) !important;
+    }
+
+    .navbar-nav .nav-link.active {
+        color: var(--cc-dorado) !important;
+    }
+
+.navbar .dropdown-menu {
+    background: var(--cc-bg-elevado);
+    border: 1px solid var(--cc-borde);
+    border-radius: 4px;
+}
+
+.navbar .dropdown-item {
+    color: var(--cc-crema);
+    font-size: 0.92rem;
+}
+
+    .navbar .dropdown-item:hover,
+    .navbar .dropdown-item:focus {
+        background: var(--cc-bg-mas-elevado);
+        color: var(--cc-dorado);
+    }
+
+/* ============================================================
+   Botones
+   ============================================================ */
+
+.btn {
+    font-family: var(--cc-fuente-cuerpo);
+    letter-spacing: 0.03em;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.btn-primary {
+    background: var(--cc-dorado);
+    border-color: var(--cc-dorado);
+    color: var(--cc-bg-base);
+    font-weight: 500;
+}
+
+    .btn-primary:hover,
+    .btn-primary:focus,
+    .btn-primary:active {
+        background: var(--cc-dorado-claro) !important;
+        border-color: var(--cc-dorado-claro) !important;
+        color: var(--cc-bg-base) !important;
+    }
+
+    .btn-primary:disabled,
+    .btn-primary.disabled {
+        background: var(--cc-dorado-oscuro);
+        border-color: var(--cc-dorado-oscuro);
+        color: var(--cc-bg-base);
+        opacity: 0.5;
+    }
+
+.btn-outline-primary,
+.btn-outline-secondary {
+    background: transparent;
+    border-color: var(--cc-borde);
+    color: var(--cc-crema);
+}
+
+    .btn-outline-primary:hover,
+    .btn-outline-secondary:hover {
+        background: var(--cc-bg-mas-elevado);
+        border-color: var(--cc-dorado);
+        color: var(--cc-dorado);
+    }
+
+.btn-outline-info {
+    background: transparent;
+    border-color: var(--cc-info);
+    color: var(--cc-info);
+}
+
+    .btn-outline-info:hover {
+        background: var(--cc-info-bg);
+        border-color: var(--cc-info);
+        color: var(--cc-info);
+    }
+
+.btn-danger,
+.btn-outline-danger {
+    background: transparent;
+    border-color: var(--cc-error);
+    color: var(--cc-error);
+}
+
+    .btn-danger:hover,
+    .btn-outline-danger:hover {
+        background: var(--cc-error);
+        border-color: var(--cc-error);
+        color: var(--cc-crema);
+    }
+
+.btn-link {
+    color: var(--cc-dorado);
+    text-decoration: none;
+}
+
+    .btn-link:hover {
+        color: var(--cc-dorado-claro);
+        text-decoration: underline;
+    }
+
+/* ============================================================
+   Cards y contenedores
+   ============================================================ */
+
+.card {
+    background: var(--cc-bg-elevado);
+    border: 1px solid var(--cc-borde);
+    border-radius: 6px;
+    color: var(--cc-crema);
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+    .card:hover {
+        border-color: var(--cc-borde);
+    }
+
+.card-title {
+    color: var(--cc-crema);
+    font-family: var(--cc-fuente-titulo);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.card-subtitle,
+.card-body .text-body-secondary {
+    color: var(--cc-crema-suave) !important;
+}
+
+.card-img-top {
+    border-radius: 6px 6px 0 0;
+}
+
+/* Card como fondo neutro (Sala/Details, Funcion/Delete, etc) */
+.card .card-body {
+    background: transparent;
+}
+
+/* ============================================================
+   Cards de películas (catálogo)
+   ============================================================ */
+
+.pelicula-card {
+    background: var(--cc-bg-elevado);
+    border: 1px solid var(--cc-borde);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+    .pelicula-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--cc-dorado);
+        box-shadow: var(--cc-sombra-elevada);
+    }
+
+    .pelicula-card .pelicula-poster {
+        aspect-ratio: 2 / 3;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .pelicula-card .pelicula-poster-vacio {
+        aspect-ratio: 2 / 3;
+        background: var(--cc-bg-mas-elevado);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--cc-gris-calido);
+        font-size: 0.9rem;
+        letter-spacing: 0.05em;
+    }
+
+    .pelicula-card .card-body {
+        padding: 1rem 1.1rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pelicula-card .card-title {
+        font-size: 1.2rem;
+        margin-bottom: 0.4rem;
+    }
+
+.pelicula-badge-proximamente {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: var(--cc-dorado);
+    color: var(--cc-bg-base);
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    z-index: 3;
+}
+
+/* ============================================================
+   Tablas
+   ============================================================ */
+
+.table {
+    color: var(--cc-crema);
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--cc-crema);
+    --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+    --bs-table-striped-color: var(--cc-crema);
+    --bs-table-hover-bg: var(--cc-dorado-tenue);
+    --bs-table-hover-color: var(--cc-crema);
+    --bs-table-border-color: var(--cc-borde-suave);
+}
+
+    .table thead th {
+        color: var(--cc-dorado);
+        font-family: var(--cc-fuente-titulo);
+        font-weight: 400;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--cc-borde);
+        padding-top: 0.85rem;
+        padding-bottom: 0.85rem;
+    }
+
+    .table > :not(caption) > * > * {
+        background-color: transparent;
+        color: var(--cc-crema);
+    }
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--cc-dorado-tenue) !important;
+}
+
+/* ============================================================
+   Badges
+   ============================================================ */
+
+.badge {
+    font-family: var(--cc-fuente-cuerpo);
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    border-radius: 3px;
+    padding: 0.35em 0.7em;
+}
+
+    .badge.bg-success {
+        background: var(--cc-exito-bg) !important;
+        color: var(--cc-exito) !important;
+        border: 1px solid var(--cc-exito);
+    }
+
+    .badge.bg-danger {
+        background: var(--cc-error-bg) !important;
+        color: var(--cc-error) !important;
+        border: 1px solid var(--cc-error);
+    }
+
+    .badge.bg-secondary {
+        background: var(--cc-bg-mas-elevado) !important;
+        color: var(--cc-crema-suave) !important;
+        border: 1px solid var(--cc-borde);
+    }
+
+    .badge.bg-info {
+        background: var(--cc-info-bg) !important;
+        color: var(--cc-info) !important;
+        border: 1px solid var(--cc-info);
+    }
+
+    .badge.bg-warning,
+    .badge.bg-warning.text-dark {
+        background: var(--cc-warning-bg) !important;
+        color: var(--cc-dorado) !important;
+        border: 1px solid var(--cc-dorado);
+    }
+
+    .badge.bg-primary {
+        background: var(--cc-dorado) !important;
+        color: var(--cc-bg-base) !important;
+        border: 1px solid var(--cc-dorado);
+    }
+
+    .badge.bg-dark {
+        background: var(--cc-bg-mas-elevado) !important;
+        color: var(--cc-crema) !important;
+        border: 1px solid var(--cc-borde);
+    }
+
+/* ============================================================
+   Alerts (TempData banners)
+   ============================================================ */
+
+.alert {
+    border-radius: 4px;
+    border-width: 1px;
+    border-style: solid;
+}
+
+.alert-success {
+    background: var(--cc-exito-bg);
+    border-color: var(--cc-exito);
+    color: var(--cc-exito);
+}
+
+.alert-danger {
+    background: var(--cc-error-bg);
+    border-color: var(--cc-error);
+    color: var(--cc-error);
+}
+
+.alert-info {
+    background: var(--cc-info-bg);
+    border-color: var(--cc-info);
+    color: var(--cc-info);
+}
+
+.alert-warning {
+    background: var(--cc-warning-bg);
+    border-color: var(--cc-dorado);
+    color: var(--cc-dorado);
+}
+
+.alert .btn-close {
+    filter: invert(1) brightness(0.9);
+}
+
+.alert-link {
+    color: inherit;
+    font-weight: 500;
+    text-decoration: underline;
+}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+
+.form-control,
+.form-select {
+    background: var(--cc-bg-elevado);
+    border: 1px solid var(--cc-borde);
+    color: var(--cc-crema);
+    border-radius: 4px;
+}
+
+    .form-control:focus,
+    .form-select:focus {
+        background: var(--cc-bg-elevado);
+        border-color: var(--cc-dorado);
+        color: var(--cc-crema);
+        box-shadow: 0 0 0 0.2rem var(--cc-dorado-tenue);
+    }
+
+    .form-control::placeholder {
+        color: var(--cc-gris-calido);
+    }
+
+    .form-control:disabled,
+    .form-control[disabled],
+    .form-control[readonly] {
+        background: var(--cc-bg-mas-elevado);
+        color: var(--cc-crema-suave);
+        opacity: 0.7;
+    }
+
+.form-label,
+.control-label {
+    color: var(--cc-crema-suave);
+    font-size: 0.92rem;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.4rem;
+}
+
+.form-text {
+    color: var(--cc-gris-calido);
+}
+
+.form-check-input {
+    background-color: var(--cc-bg-elevado);
+    border-color: var(--cc-borde);
+}
+
+    .form-check-input:checked {
+        background-color: var(--cc-dorado);
+        border-color: var(--cc-dorado);
+    }
+
+.text-danger {
+    color: var(--cc-error) !important;
+}
+
+/* Botones del filtro de Mis Reservas */
+.btn-check:checked + .btn-outline-secondary {
+    background: var(--cc-dorado);
+    border-color: var(--cc-dorado);
+    color: var(--cc-bg-base);
+}
+
+/* Tabs (por si las usás en otro lado) */
+.nav-tabs {
+    border-bottom: 1px solid var(--cc-borde);
+}
+
+    .nav-tabs .nav-link {
+        color: var(--cc-crema-suave);
+        border-color: transparent;
+        background: transparent;
+    }
+
+        .nav-tabs .nav-link.active {
+            color: var(--cc-dorado);
+            background: transparent;
+            border-color: transparent transparent var(--cc-dorado);
+            border-bottom-width: 2px;
+        }
+
+/* ============================================================
+   Input groups (botón mostrar/ocultar contraseña)
+   ============================================================ */
+
+.input-group .form-control {
+    border-right: 0;
+}
+
+.input-group .btn-outline-secondary {
+    border-color: var(--cc-borde);
+    color: var(--cc-crema-suave);
+    background: var(--cc-bg-elevado);
+    font-size: 0.85rem;
+    min-width: 86px;
+}
+
+    .input-group .btn-outline-secondary:hover {
+        background: var(--cc-bg-mas-elevado);
+        border-color: var(--cc-dorado);
+        color: var(--cc-dorado);
+    }
+
+.input-group-text {
+    background: var(--cc-bg-mas-elevado);
+    border-color: var(--cc-borde);
+    color: var(--cc-crema-suave);
+}
+
+/* ============================================================
+   List group (menú lateral de Manage)
+   ============================================================ */
+
+.list-group-item {
+    background: var(--cc-bg-elevado);
+    border-color: var(--cc-borde);
+    color: var(--cc-crema);
+    padding: 0.85rem 1.1rem;
+}
+
+.list-group-item-action:hover,
+.list-group-item-action:focus {
+    background: var(--cc-bg-mas-elevado);
+    color: var(--cc-dorado);
+}
+
+.list-group-item.active {
+    background: var(--cc-dorado-tenue);
+    border-color: var(--cc-dorado);
+    color: var(--cc-dorado);
+    font-weight: 500;
+}
+
+/* ============================================================
+   Footer
+   ============================================================ */
+
+.footer {
+    background: var(--cc-bg-elevado);
+    border-top: 1px solid var(--cc-borde) !important;
+    color: var(--cc-gris-calido);
+    padding: 1.2rem 0;
+    margin-top: 3rem;
+}
+
+    .footer a {
+        color: var(--cc-crema-suave);
+    }
+
+        .footer a:hover {
+            color: var(--cc-dorado);
+        }
+
+/* ============================================================
+   Home — hero
+   ============================================================ */
+
+.hero-cinecore {
+    background: linear-gradient(135deg, var(--cc-bg-elevado) 0%, var(--cc-bg-base) 100%);
+    border: 1px solid var(--cc-borde);
+    border-radius: 8px;
+    padding: 4rem 3rem;
+    margin-bottom: 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+    .hero-cinecore::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, var(--cc-dorado) 50%, transparent 100%);
+    }
+
+    .hero-cinecore::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, var(--cc-dorado) 50%, transparent 100%);
+    }
+
+    .hero-cinecore h1 {
+        font-size: 4rem;
+        color: var(--cc-dorado);
+        letter-spacing: 0.15em;
+        margin-bottom: 1rem;
+    }
+
+    .hero-cinecore .lead {
+        color: var(--cc-crema-suave);
+        font-size: 1.2rem;
+        letter-spacing: 0.04em;
+        max-width: 600px;
+        margin: 0 auto 2rem;
+    }
+
+    .hero-cinecore .hero-acciones {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+/* Sección de feature en home */
+.home-feature {
+    text-align: center;
+    padding: 1.5rem;
+}
+
+    .home-feature h3 {
+        color: var(--cc-dorado);
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .home-feature p {
+        color: var(--cc-crema-suave);
+        font-size: 0.95rem;
+    }
+
+.bg-secondary-subtle {
+    background: var(--cc-bg-mas-elevado) !important;
+    color: var(--cc-crema-suave) !important;
+}
+
+.opacity-75 {
+    opacity: 0.55 !important;
+}
+
+/* Listas de definición (dl) en detalles */
+dl.row dt {
+    color: var(--cc-dorado);
+    font-family: var(--cc-fuente-titulo);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-size: 0.92rem;
+}
+
+dl.row dd {
+    color: var(--cc-crema);
+}
+
+/* Login / Register de Identity */
+.text-bg-light {
+    background: var(--cc-bg-elevado) !important;
+    color: var(--cc-crema) !important;
+}
+
+/* Quitar el outline azul default en todos los elementos focuseables */
+*:focus {
+    outline: none;
+}
+
+.btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem var(--cc-dorado-tenue);
+}
+
+/* Override específico para botones primary (mantiene contraste con el dorado del fondo) */
+.btn-primary:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(212, 175, 55, 0.4);
+}
+
+/* Links: focus ring sutil */
+a:focus-visible {
+    outline: 2px solid var(--cc-dorado);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+/* Form controls (inputs, selects): mantienen el focus dorado que ya estaba */
+.form-control:focus-visible,
+.form-select:focus-visible {
+    outline: none;
+    border-color: var(--cc-dorado);
+    box-shadow: 0 0 0 0.2rem var(--cc-dorado-tenue);
+}
+
+/* Checkboxes y radios */
+.form-check-input:focus-visible {
+    border-color: var(--cc-dorado);
+    box-shadow: 0 0 0 0.2rem var(--cc-dorado-tenue);
+}
+
+/* Btn-check (radio buttons del filtro de Mis Reservas) */
+.btn-check:focus-visible + .btn {
+    box-shadow: 0 0 0 0.2rem var(--cc-dorado-tenue);
+}
+
+.btn:focus,
+.btn.focus,
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem var(--cc-dorado-tenue);
+}
+
+    .btn:active:focus,
+    .btn:focus:not(:focus-visible) {
+        outline: none;
+        box-shadow: none;
+    }

@@ -1,8 +1,45 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Inicio";
+    var esCliente = User.Identity?.IsAuthenticated == true && User.IsInRole(CineCore.Models.Roles.Cliente);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<section class="hero-cinecore">
+    <h1>CineCore</h1>
+    <p class="lead">
+        Reservá tu butaca en las mejores salas. Estrenos, clásicos y experiencias premium —
+        todo en un solo lugar.
+    </p>
+    <div class="hero-acciones">
+        <a asp-controller="Funcion" asp-action="Index" class="btn btn-primary btn-lg">Ver cartelera</a>
+        <a asp-controller="Pelicula" asp-action="Index" class="btn btn-outline-secondary btn-lg">Películas</a>
+    </div>
+</section>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="home-feature">
+            <h3>Cartelera viva</h3>
+            <p>Las funciones que están disponibles ahora, ordenadas por horario. Sin sorpresas.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="home-feature">
+            <h3>Reservá hasta 8 butacas</h3>
+            <p>Elegí tus lugares en el mapa de la sala. Una sola operación para vos y los tuyos.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="home-feature">
+            <h3>Salas premium</h3>
+            <p>2D, 3D, 4D E-Motion. Cada experiencia con su precio claro y desglosado.</p>
+        </div>
+    </div>
 </div>
+
+@if (!esCliente && User.Identity?.IsAuthenticated != true)
+{
+    <div class="text-center mt-5 mb-4">
+        <p class="text-muted mb-3">¿Todavía no tenés cuenta?</p>
+        <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-outline-primary">Registrate</a>
+    </div>
+}

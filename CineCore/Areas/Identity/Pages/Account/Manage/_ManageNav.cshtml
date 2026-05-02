@@ -1,0 +1,16 @@
+﻿@{
+    var activePage = ViewData["ActivePage"] as string ?? string.Empty;
+
+    string Active(string nombre) => activePage == nombre ? "active" : "";
+}
+
+<div class="list-group">
+    <a class="list-group-item list-group-item-action @Active("Index")"
+       id="profile" asp-page="./Index">Perfil</a>
+    <a class="list-group-item list-group-item-action @Active("Email")"
+       id="email" asp-page="./Email">Email</a>
+    <a class="list-group-item list-group-item-action @Active("ChangePassword")"
+       id="change-password" asp-page="./ChangePassword">Contraseña</a>
+    <a class="list-group-item list-group-item-action @Active("PersonalData")"
+       id="personal-data" asp-page="./PersonalData">Datos personales</a>
+</div>

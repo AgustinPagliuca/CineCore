@@ -1,0 +1,25 @@
+﻿@page
+@model PersonalDataModel
+@{
+    ViewData["Title"] = "Datos personales";
+    ViewData["ActivePage"] = "PersonalData";
+}
+
+<h3>Datos personales</h3>
+
+<p class="text-muted">
+    Tu cuenta contiene datos personales que vos nos proporcionaste.
+    Esta página te permite descargarlos o eliminarlos.
+</p>
+
+<p class="alert alert-warning">
+    Eliminar tus datos personales borra tu cuenta de forma permanente y no se puede recuperar.
+</p>
+
+<div class="d-flex gap-2 flex-wrap">
+    <form id="download-data" asp-page="DownloadPersonalData" method="post" class="d-inline">
+        <button class="btn btn-outline-secondary" type="submit">Descargar mis datos</button>
+    </form>
+
+    <a id="delete" class="btn btn-outline-danger" asp-page="DeletePersonalData">Eliminar mi cuenta</a>
+</div>
