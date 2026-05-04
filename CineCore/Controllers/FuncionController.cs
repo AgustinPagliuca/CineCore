@@ -26,6 +26,7 @@ namespace CineCore.Controllers
                 .Include(f => f.Pelicula)
                 .Include(f => f.Sala)
                     .ThenInclude(s => s!.TipoSala)
+                .Include(f => f.Reservas)
                 .AsQueryable();
 
             if (!esEmpleado)
@@ -54,6 +55,7 @@ namespace CineCore.Controllers
                     .Include(f => f.Pelicula)
                     .Include(f => f.Sala)
                         .ThenInclude(s => s!.TipoSala)
+                    .Include(f => f.Reservas)
                     .FirstOrDefaultAsync(m => m.Id == id);
 
                 result = funcion == null ? NotFound() : View(funcion);

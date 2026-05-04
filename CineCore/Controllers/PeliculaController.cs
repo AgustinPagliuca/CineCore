@@ -56,6 +56,8 @@ namespace CineCore.Controllers
                     .Include(p => p.Funciones.Where(f => f.FechaHora >= ahora))
                         .ThenInclude(f => f.Sala!)
                             .ThenInclude(s => s.TipoSala)
+                    .Include(p => p.Funciones.Where(f => f.FechaHora >= ahora))
+                        .ThenInclude(f => f.Reservas)
                     .FirstOrDefaultAsync(m => m.Id == id);
 
                 if (pelicula == null)
