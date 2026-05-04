@@ -1,21 +1,139 @@
-﻿@{
+﻿@model CineCore.Models.ViewModels.HomeViewModel
+
+@{
     ViewData["Title"] = "Inicio";
-    var esCliente = User.Identity?.IsAuthenticated == true && User.IsInRole(CineCore.Models.Roles.Cliente);
+    var noLogueado = User.Identity?.IsAuthenticated != true;
+    var hayCarrusel = Model.PeliculasCarrusel.Any();
+    var hayCartelera = Model.PeliculasEnCartelera.Any();
 }
 
-<section class="hero-cinecore">
-    <h1>CineCore</h1>
-    <p class="lead">
-        Reservá tu butaca en las mejores salas. Estrenos, clásicos y experiencias premium —
-        todo en un solo lugar.
-    </p>
-    <div class="hero-acciones">
-        <a asp-controller="Funcion" asp-action="Index" class="btn btn-primary btn-lg">Ver cartelera</a>
-        <a asp-controller="Pelicula" asp-action="Index" class="btn btn-outline-secondary btn-lg">Películas</a>
-    </div>
-</section>
+@if (hayCarrusel)
+{
+    <div id="carruselHome" class="carousel slide carousel-fade cinecore-carousel mb-5"
+         data-bs-ride="carousel" data-bs-interval="5000">
 
-<div class="row mb-4">
+        @* Indicadores (puntos abajo) *@
+        <div class="carousel-indicators">
+            @for (var i = 0; i < Model.PeliculasCarrusel.Count; i++)
+            {
+                <button type="button" data-bs-target="#carruselHome" data-bs-slide-to="@i"
+                        class="@(i == 0 ? "active" : "")"
+                        aria-current="@(i == 0 ? "true" : "false")"
+                        aria-label="Slide @(i + 1)"></button>
+            }
+        </div>
+
+        @* Slides *@
+        <div class="carousel-inner">
+            @for (var i = 0; i < Model.PeliculasCarrusel.Count; i++)
+            {
+                var pelicula = Model.PeliculasCarrusel[i];
+                var funcionMasProxima = pelicula.Funciones
+                    .OrderBy(f => f.FechaHora)
+                    .FirstOrDefault();
+
+                <div class="carousel-item @(i == 0 ? "active" : "")">
+                    <img src="@pelicula.ImagenUrl" class="d-block w-100 carrusel-imagen"
+                         alt="@pelicula.Titulo" />
+                    <div class="carrusel-overlay">
+                        <div class="carrusel-info">
+                            <h2 class="carrusel-titulo">@pelicula.Titulo</h2>
+                            @if (funcionMasProxima != null)
+                            {
+                                <p class="carrusel-fecha">
+                                    Próxima función: @funcionMasProxima.FechaHora.ToString("dddd dd/MM · HH:mm")
+                                </p>
+                            }
+                            <div class="carrusel-acciones">
+                                <a asp-controller="Pelicula" asp-action="Details" asp-route-id="@pelicula.Id"
+                                       class="btn btn-primary btn-lg">
+                                    Reservar
+                                </a>
+                                <a asp-controller="Pelicula" asp-action="Details" asp-route-id="@pelicula.Id"
+                                       class="btn btn-outline-secondary btn-lg">
+                                    Más info
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @* Flechas *@
+        <button class="carousel-control-prev" type="button" data-bs-target="#carruselHome" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Anterior</span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#carruselHome" data-bs-slide="next">
+            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+            <span class="visually-hidden">Siguiente</span>
+        </button>
+    </div>
+}
+else
+{
+    @* Si no hay películas con poster, mostrar el hero clásico *@
+    <section class="hero-cinecore">
+        <h1>CineCore</h1>
+        <p class="lead">
+            Reservá tu butaca en las mejores salas. Estrenos, clásicos y
+            experiencias premium — todo en un solo lugar.
+        </p>
+        <div class="hero-acciones">
+            <a asp-controller="Funcion" asp-action="Index" class="btn btn-primary btn-lg">Ver cartelera</a>
+            <a asp-controller="Pelicula" asp-action="Index" class="btn btn-outline-secondary btn-lg">Películas</a>
+        </div>
+    </section>
+}
+
+@* Grilla de películas en cartelera *@
+@if (hayCartelera)
+{
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0">Películas en Cartelera</h2>
+            <a asp-controller="Funcion" asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                Ver toda la cartelera
+            </a>
+        </div>
+
+        <div class="row g-4">
+            @foreach (var pelicula in Model.PeliculasEnCartelera.Take(8))
+            {
+                var tienePoster = !string.IsNullOrWhiteSpace(pelicula.ImagenUrl);
+                <div class="col-sm-6 col-md-4 col-lg-3">
+                    <div class="pelicula-card position-relative">
+                        <a asp-controller="Pelicula" asp-action="Details" asp-route-id="@pelicula.Id">
+                            @if (tienePoster)
+                            {
+                                <img src="@pelicula.ImagenUrl" alt="Poster de @pelicula.Titulo" class="pelicula-poster" />
+                            }
+                            else
+                            {
+                                <div class="pelicula-poster-vacio">Sin imagen</div>
+                            }
+                        </a>
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <a asp-controller="Pelicula" asp-action="Details" asp-route-id="@pelicula.Id"
+                                       class="text-reset text-decoration-none stretched-link">
+                                    @pelicula.Titulo
+                                </a>
+                            </h5>
+                            <p class="card-subtitle text-body-secondary mb-2 small">
+                                @pelicula.Clasificacion · @Duracion.Format(pelicula.Duracion)
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@* Features *@
+<section class="row mb-5">
     <div class="col-md-4">
         <div class="home-feature">
             <h3>Cartelera viva</h3>
@@ -34,12 +152,13 @@
             <p>2D, 3D, 4D E-Motion. Cada experiencia con su precio claro y desglosado.</p>
         </div>
     </div>
-</div>
+</section>
 
-@if (!esCliente && User.Identity?.IsAuthenticated != true)
+@* CTA registro solo si NO está logueado *@
+@if (noLogueado)
 {
-    <div class="text-center mt-5 mb-4">
+    <section class="text-center mb-4">
         <p class="text-muted mb-3">¿Todavía no tenés cuenta?</p>
         <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-outline-primary">Registrate</a>
-    </div>
+    </section>
 }

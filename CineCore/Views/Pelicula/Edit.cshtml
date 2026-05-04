@@ -1,54 +1,88 @@
 ﻿@model CineCore.Models.Pelicula
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Editar película";
+    var posterActual = string.IsNullOrWhiteSpace(Model.ImagenUrl) ? string.Empty : Model.ImagenUrl;
 }
 
-<h1>Edit</h1>
+<h1>Editar película</h1>
+<p class="text-muted mb-4">Modificá los datos de la película.</p>
 
-<h4>Pelicula</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Titulo" class="control-label"></label>
+<form asp-action="Edit">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row">
+        <div class="col-md-7">
+            <div class="form-group mb-3">
+                <label asp-for="Titulo" class="form-label"></label>
                 <input asp-for="Titulo" class="form-control" />
                 <span asp-validation-for="Titulo" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="Duracion" class="control-label"></label>
-                <input asp-for="Duracion" class="form-control" />
-                <span asp-validation-for="Duracion" class="text-danger"></span>
+
+            <div class="row">
+                <div class="col-sm-6 form-group mb-3">
+                    <label asp-for="Duracion" class="form-label"></label>
+                    <input asp-for="Duracion" class="form-control" />
+                    <span asp-validation-for="Duracion" class="text-danger"></span>
+                </div>
+
+                <div class="col-sm-6 form-group mb-3">
+                    <label asp-for="Clasificacion" class="form-label"></label>
+                    <input asp-for="Clasificacion" class="form-control" />
+                    <span asp-validation-for="Clasificacion" class="text-danger"></span>
+                </div>
             </div>
-            <div class="form-group">
-                <label asp-for="Clasificacion" class="control-label"></label>
-                <input asp-for="Clasificacion" class="form-control" />
-                <span asp-validation-for="Clasificacion" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Sinopsis" class="control-label"></label>
-                <input asp-for="Sinopsis" class="form-control" />
+
+            <div class="form-group mb-3">
+                <label asp-for="Sinopsis" class="form-label">Sinopsis</label>
+                <textarea asp-for="Sinopsis" class="form-control" rows="4"></textarea>
                 <span asp-validation-for="Sinopsis" class="text-danger"></span>
             </div>
-            <div class="form-group">
-                <label asp-for="ImagenUrl" class="control-label"></label>
-                <input asp-for="ImagenUrl" class="form-control" />
-                <span asp-validation-for="ImagenUrl" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
-    </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+            <div class="form-group mb-3">
+                <label class="form-label">Géneros</label>
+                <select name="generosSeleccionados" asp-items="ViewBag.Generos as MultiSelectList"
+                        class="form-select" multiple size="5"></select>
+                <small class="form-text">
+                    Mantené Ctrl (o Cmd en Mac) para seleccionar varios.
+                </small>
+            </div>
+
+            <div class="form-group mb-3">
+                <label asp-for="ImagenUrl" class="form-label"></label>
+                <input asp-for="ImagenUrl" class="form-control" id="poster-url-input"
+                       placeholder="https://image.tmdb.org/t/p/w500/..." />
+                <span asp-validation-for="ImagenUrl" class="text-danger"></span>
+                <small class="form-text">
+                    Pegá la URL pública de un poster (TMDB, IMDB, Wikipedia).
+                </small>
+            </div>
+
+            <div class="form-group mt-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <label class="form-label">Vista previa del poster</label>
+            <div class="poster-preview-wrap">
+                <img id="poster-preview" src="@posterActual" alt="Vista previa del poster"
+                     class="poster-preview"
+                     style="@(string.IsNullOrEmpty(posterActual) ? "display:none;" : "")" />
+                <div id="poster-preview-placeholder" class="poster-preview-placeholder"
+                     style="@(string.IsNullOrEmpty(posterActual) ? "" : "display:none;")">
+                    <span>Sin imagen cargada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script src="~/js/cinecore-poster-preview.js" asp-append-version="true"></script>
 }
