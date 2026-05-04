@@ -10,7 +10,8 @@ namespace CineCore.Models
         [StringLength(50, ErrorMessage = "El nombre no puede superar los {1} caracteres.")]
         public string Nombre { get; set; } = string.Empty;
 
-        [StringLength(500, ErrorMessage = "La descripción no puede superar los {1} caracteres.")]
+        [StringLength(200, ErrorMessage = "La descripción no puede superar los {1} caracteres.")]
+        [Display(Name = "Descripción")]
         public string? Descripcion { get; set; }
 
         public ICollection<Pelicula> Peliculas { get; set; } = new List<Pelicula>();

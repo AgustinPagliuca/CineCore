@@ -34,7 +34,7 @@
 
             <div class="form-group mb-3">
                 <label asp-for="Sinopsis" class="form-label">Sinopsis</label>
-                <textarea asp-for="Sinopsis" class="form-control" rows="4"
+                <textarea asp-for="Sinopsis" class="form-control" rows="3"
                           placeholder="Resumen breve de la trama..."></textarea>
                 <span asp-validation-for="Sinopsis" class="text-danger"></span>
             </div>
@@ -42,7 +42,7 @@
             <div class="form-group mb-3">
                 <label class="form-label">Géneros</label>
                 <select name="generosSeleccionados" asp-items="ViewBag.Generos as MultiSelectList"
-                        class="form-select" multiple size="5"></select>
+                        class="form-select" multiple size="3"></select>
                 <small class="form-text">
                     Mantené Ctrl (o Cmd en Mac) para seleccionar varios.
                 </small>
@@ -57,11 +57,6 @@
                     Pegá la URL pública de un poster (TMDB, IMDB, Wikipedia).
                 </small>
             </div>
-
-            <div class="form-group mt-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Crear película</button>
-                <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
-            </div>
         </div>
 
         <div class="col-md-5">
@@ -74,6 +69,13 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <hr class="my-4" />
+
+    <div class="d-flex gap-2 mb-4">
+        <button type="submit" class="btn btn-primary">Crear película</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
     </div>
 </form>
 
