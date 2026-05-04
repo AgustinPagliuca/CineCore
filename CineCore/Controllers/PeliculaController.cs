@@ -54,7 +54,7 @@ namespace CineCore.Controllers
                 var pelicula = await _context.Peliculas
                     .Include(p => p.Generos)
                     .Include(p => p.Funciones.Where(f => f.FechaHora >= ahora))
-                        .ThenInclude(f => f.Sala)
+                        .ThenInclude(f => f.Sala!)
                             .ThenInclude(s => s.TipoSala)
                     .FirstOrDefaultAsync(m => m.Id == id);
 

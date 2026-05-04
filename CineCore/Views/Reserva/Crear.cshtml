@@ -105,19 +105,26 @@ else
                     <span class="mapa-leyenda-caja ocupada"></span> Ocupada
                 </div>
             </div>
-
-            <div class="mapa-resumen mapa-resumen-vacio" id="mapaResumen">
-                <span id="mapaResumenMensaje">Elegí al menos una butaca para continuar</span>
-                <span class="mapa-resumen-detalle" id="mapaResumenDetalle"></span>
-                <span class="mapa-resumen-total" id="mapaResumenTotal"></span>
-            </div>
         </div>
 
-        <div class="d-flex justify-content-center gap-2 mt-4">
-            <a asp-controller="Funcion" asp-action="Index" class="btn btn-outline-secondary">Volver</a>
-            <button type="submit" class="btn btn-primary" id="btnConfirmar" disabled>
-                Confirmar reserva
-            </button>
+        <div class="reserva-sticky-bar vacia" id="reservaStickyBar">
+            <div class="reserva-sticky-bar-contenido">
+                <div class="reserva-sticky-resumen">
+                    <span class="reserva-sticky-resumen-titulo" id="stickyTitulo">
+                        Seleccioná tus butacas
+                    </span>
+                    <span class="reserva-sticky-resumen-detalle" id="stickyDetalle"></span>
+                    <span class="reserva-sticky-resumen-total" id="stickyTotal"></span>
+                </div>
+                <div class="reserva-sticky-acciones">
+                    <a asp-controller="Funcion" asp-action="Index" class="btn btn-outline-secondary">
+                        Volver
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="btnConfirmar" disabled>
+                        Confirmar reserva
+                    </button>
+                </div>
+            </div>
         </div>
     </form>
 }
@@ -125,65 +132,78 @@ else
 @section Scripts {
     <script>
         (function () {
-            const mapa = document.querySelector('.mapa-sala');
-            if (!mapa) return;
+            'use strict';
 
-            const precioUnitario = parseFloat(mapa.dataset.precioUnitario);
-            const maximo = parseInt(mapa.dataset.maximo, 10);
+            var mapa = document.querySelector('.mapa-sala');
+            if (!mapa) {
+                return;
+            }
 
-            const checks = mapa.querySelectorAll('.mapa-butaca-input');
-            const resumenContenedor = document.getElementById('mapaResumen');
-            const resumenMensaje = document.getElementById('mapaResumenMensaje');
-            const resumenDetalle = document.getElementById('mapaResumenDetalle');
-            const resumenTotal = document.getElementById('mapaResumenTotal');
-            const btnConfirmar = document.getElementById('btnConfirmar');
+            var precioPorButaca = parseFloat(mapa.getAttribute('data-precio-unitario'));
+            var maximoButacas = parseInt(mapa.getAttribute('data-maximo'), 10);
 
-            const formatoMoneda = new Intl.NumberFormat('es-AR', {
-                style: 'currency',
-                currency: 'ARS',
-                minimumFractionDigits: 2
-            });
+            var inputs = document.querySelectorAll('.mapa-butaca-input');
+            var stickyBar = document.getElementById('reservaStickyBar');
+            var titulo = document.getElementById('stickyTitulo');
+            var detalle = document.getElementById('stickyDetalle');
+            var total = document.getElementById('stickyTotal');
+            var btnConfirmar = document.getElementById('btnConfirmar');
 
-            function actualizar() {
-                const seleccionados = Array.from(checks).filter(c => c.checked);
-                const cantidad = seleccionados.length;
-                const etiquetas = seleccionados
-                    .map(c => c.dataset.etiqueta)
-                    .sort();
+            function formatearMoneda(monto) {
+                return monto.toLocaleString('es-AR', {
+                    style: 'currency',
+                    currency: 'ARS',
+                    minimumFractionDigits: 2
+                });
+            }
 
-                const topeAlcanzado = cantidad >= maximo;
-                checks.forEach(function (c) {
-                    const label = c.nextElementSibling;
-                    if (!c.checked && topeAlcanzado) {
-                        c.disabled = true;
+            function actualizarResumen() {
+                var seleccionados = Array.prototype.filter.call(inputs, function (i) {
+                    return i.checked;
+                });
+                var cantidad = seleccionados.length;
+
+                if (cantidad === 0) {
+                    stickyBar.classList.add('vacia');
+                    titulo.textContent = 'Seleccioná tus butacas';
+                    detalle.textContent = '';
+                    total.textContent = '';
+                    btnConfirmar.disabled = true;
+                } else {
+                    stickyBar.classList.remove('vacia');
+
+                    var etiquetas = seleccionados
+                        .map(function (i) { return i.dataset.etiqueta; })
+                        .join(' · ');
+                    var montoTotal = cantidad * precioPorButaca;
+
+                    titulo.textContent = cantidad === 1
+                        ? '1 butaca seleccionada'
+                        : cantidad + ' butacas seleccionadas';
+                    detalle.textContent = etiquetas;
+                    total.textContent = 'Total: ' + formatearMoneda(montoTotal);
+                    btnConfirmar.disabled = false;
+                }
+
+                Array.prototype.forEach.call(inputs, function (input) {
+                    var label = input.nextElementSibling;
+                    if (!label) {
+                        return;
+                    }
+
+                    if (!input.checked && cantidad >= maximoButacas) {
                         label.classList.add('mapa-butaca-bloqueada');
                     } else {
-                        c.disabled = false;
                         label.classList.remove('mapa-butaca-bloqueada');
                     }
                 });
-
-                if (cantidad === 0) {
-                    resumenContenedor.classList.add('mapa-resumen-vacio');
-                    resumenMensaje.textContent = 'Elegí al menos una butaca para continuar';
-                    resumenDetalle.textContent = '';
-                    resumenTotal.textContent = '';
-                    btnConfirmar.disabled = true;
-                    btnConfirmar.textContent = 'Confirmar reserva';
-                } else {
-                    resumenContenedor.classList.remove('mapa-resumen-vacio');
-                    const plural = cantidad === 1 ? 'butaca' : 'butacas';
-                    resumenMensaje.textContent = `${cantidad} ${plural} seleccionada${cantidad === 1 ? '' : 's'}`;
-                    resumenDetalle.textContent = etiquetas.join(' · ');
-                    const total = precioUnitario * cantidad;
-                    resumenTotal.textContent = 'Total: ' + formatoMoneda.format(total);
-                    btnConfirmar.disabled = false;
-                    btnConfirmar.textContent = `Confirmar reserva por ${formatoMoneda.format(total)}`;
-                }
             }
 
-            checks.forEach(c => c.addEventListener('change', actualizar));
-            actualizar();
+            Array.prototype.forEach.call(inputs, function (input) {
+                input.addEventListener('change', actualizarResumen);
+            });
+
+            actualizarResumen();
         })();
     </script>
 }

@@ -964,3 +964,97 @@ select[multiple].form-select {
             background: var(--cc-dorado-tenue) linear-gradient(0deg, var(--cc-dorado-tenue), var(--cc-dorado-tenue));
             color: var(--cc-dorado);
         }
+
+/* ============================================================
+   Sticky bar para flujo de reserva
+   Se fija al fondo del viewport cuando hay butacas seleccionadas.
+   ============================================================ */
+
+.reserva-sticky-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 100;
+    background: linear-gradient( 180deg, rgba(15, 10, 7, 0) 0%, rgba(15, 10, 7, 0.95) 30%, var(--cc-bg-elevado) 100% );
+    border-top: 1px solid var(--cc-borde);
+    padding: 1.2rem 0 1.4rem;
+    margin: 2rem -12px 0;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.reserva-sticky-bar-contenido {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    padding: 0 1.5rem;
+}
+
+.reserva-sticky-resumen {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.reserva-sticky-resumen-titulo {
+    color: var(--cc-crema);
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+}
+
+.reserva-sticky-resumen-detalle {
+    color: var(--cc-crema-suave);
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+}
+
+.reserva-sticky-resumen-total {
+    color: var(--cc-dorado);
+    font-size: 1.3rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+.reserva-sticky-acciones {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+    .reserva-sticky-acciones .btn {
+        min-width: 140px;
+    }
+
+/* Estado vacío: mensaje sutil cuando no hay butacas seleccionadas */
+.reserva-sticky-bar.vacia .reserva-sticky-resumen-titulo {
+    color: var(--cc-gris-calido);
+}
+
+.reserva-sticky-bar.vacia .reserva-sticky-resumen-detalle,
+.reserva-sticky-bar.vacia .reserva-sticky-resumen-total {
+    display: none;
+}
+
+.reserva-sticky-bar.vacia .reserva-sticky-acciones .btn-primary {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Responsive: en pantallas chicas, apilar resumen y acciones */
+@media (max-width: 600px) {
+    .reserva-sticky-bar-contenido {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+
+    .reserva-sticky-acciones {
+        justify-content: stretch;
+    }
+
+        .reserva-sticky-acciones .btn {
+            flex: 1;
+        }
+}
