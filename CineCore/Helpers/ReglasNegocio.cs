@@ -2,6 +2,10 @@
 {
     public static class ReglasNegocio
     {
+        public const int DuracionMinimaPelicula = 1;
+
+        public const int DuracionMaximaPelicula = 500;
+
         public const int MaximoButacasPorReserva = 8;
         
         public static readonly TimeSpan MargenMinimoCreacionFuncion = TimeSpan.FromMinutes(30);
